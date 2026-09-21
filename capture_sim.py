@@ -210,6 +210,10 @@ CONFIG: Dict = {
         # 아래 비율은 안정 한계 대비 여유를 둔 값이며, 그물실은 "안정조건이 허용하는 한 비신축성"으로 모델링된다.
         "spring_k_factor": 0.20,      # k = 이 값 x m / dt^2  (안정 한계 0.25)
         "spring_c_factor": 0.30,      # c = 이 값 x m / dt    (안정 한계 0.5)
+        # 계수를 dt 에서 유도하므로 dt 를 바꾸면 그물 모델 자체가 달라진다.
+        # 시간 스텝 수렴성 시험처럼 "모델은 고정하고 적분 스텝만" 바꿔야 할 때는
+        # 여기에 기준 dt 를 넣어 계수를 고정한다. None 이면 실제 dt 를 쓴다.
+        "spring_reference_dt": None,
         "shear_springs": True,        # 대각(전단) 스프링 포함 여부
         "tension_only": True,         # 실은 압축력을 전달하지 않음
         "deploy_speed": 4.0,          # 발사 속도 [m/s]  # TODO: 출처 확인 필요
@@ -1139,8 +1143,13 @@ class NetCapture(CaptureMethod):
         radii = np.full(n * n, spacing * self.ncfg["node_radius_ratio"])
         # 스프링 계수를 안정조건에서 유도 (가장 가벼운 질점 기준)
         dt = world.dt
-        k = self.ncfg["spring_k_factor"] * node_mass / (dt * dt)
-        c = self.ncfg["spring_c_factor"] * node_mass / dt
+        # 계수 유도에 쓸 dt. 수렴성 시험에서는 기준 dt 로 고정해 모델을 붙들어 둔다.
+        dt_ref = self.ncfg.get("spring_reference_dt") or dt
+        if dt_ref < dt:
+            print(f"[warn] spring_reference_dt({dt_ref:g}) 가 실제 dt({dt:g}) 보다 작다. "
+                  f"안정조건을 넘어 발산할 수 있다.", file=sys.stderr)
+        k = self.ncfg["spring_k_factor"] * node_mass / (dt_ref * dt_ref)
+        c = self.ncfg["spring_c_factor"] * node_mass / dt_ref
         self.node_mass, self.corner_mass = node_mass, corner_mass
         self.net_total_mass = float(masses.sum())
         springs = []
@@ -1184,8 +1193,8 @@ class NetCapture(CaptureMethod):
         # 모서리 4점 ↔ 서비서 발사구 테더 (인장 전용)
         d0 = self.cfg["standoff"]["net"] + target.bounding_radius
         L_tether = self.ncfg["tether_length_factor"] * (d0 + target.bounding_radius)
-        tether_k = self.ncfg["tether_k_factor"] * corner_mass / (dt * dt)
-        tether_c = self.ncfg["tether_c_factor"] * corner_mass / dt
+        tether_k = self.ncfg["tether_k_factor"] * corner_mass / (dt_ref * dt_ref)
+        tether_c = self.ncfg["tether_c_factor"] * corner_mass / dt_ref
         for ci in corners:
             self.net.anchors.append(Anchor(ci, servicer.body, servicer.attach_local.copy(), L_tether,
                                            tether_k, tether_c, self.ncfg["winch_max_tension"]))

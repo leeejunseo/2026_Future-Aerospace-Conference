@@ -93,10 +93,21 @@ DT_METRICS = ["success", "capture_time", "impulse", "servicer_attitude_error", "
 
 
 def check_timestep(cases: List[Dict], dts: List[float]) -> List[Dict]:
-    """같은 시행을 여러 dt 로 반복. 스프링 강성은 안정조건을 넘지 않도록 dt 를 줄이는 방향으로만 시험한다."""
+    """
+    같은 시행을 여러 dt 로 반복한다.
+
+    그물의 스프링 계수는 적분 안정조건에서 유도하므로(k = f x m/dt^2) dt 를 바꾸면
+    모델 자체가 달라져 수렴성 시험이 성립하지 않는다. 그래서 기준 dt 로 계수를 고정하고
+    적분 스텝만 바꾼다. 기준보다 큰 dt 는 안정조건을 넘으므로 기준 이하만 시험한다.
+    """
     rows = []
     base_dt = cs.CONFIG["sim"]["timestep"]
     base_fps = cs.CONFIG["scene"]["viewer_fps"]
+    base_ref = cs.CONFIG["net"]["spring_reference_dt"]
+    dts = [d for d in dts if d <= base_dt + 1e-12]
+    if not dts:
+        dts = [base_dt]
+    cs.CONFIG["net"]["spring_reference_dt"] = base_dt   # 모델 고정
     try:
         for case in cases:
             for dt in dts:
@@ -112,6 +123,7 @@ def check_timestep(cases: List[Dict], dts: List[float]) -> List[Dict]:
     finally:
         cs.CONFIG["sim"]["timestep"] = base_dt
         cs.CONFIG["scene"]["viewer_fps"] = base_fps
+        cs.CONFIG["net"]["spring_reference_dt"] = base_ref
     return rows
 
 
@@ -179,8 +191,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="수치 검증 (토크-프리 회전 / 스텝 수렴 / 충격량 일관성)")
     ap.add_argument("--only", choices=["rotation", "dt", "impulse"], default=None)
     ap.add_argument("--out", default="verification")
-    ap.add_argument("--dts", type=int, nargs="+", default=[240, 480, 960],
-                    help="시험할 스텝 (1/N 초). 기본 1/240, 1/480, 1/960")
+    ap.add_argument("--dts", type=int, nargs="+", default=[480, 960, 1920],
+                    help="시험할 스텝 (1/N 초). 기준 dt 보다 큰 스텝은 안정조건을 넘어 자동 제외된다")
     args = ap.parse_args(argv)
     os.makedirs(args.out, exist_ok=True)
     lines: List[str] = []
@@ -227,6 +239,8 @@ def main(argv=None):
         log()
         log("  해석: 접촉이 있는 다물체 시뮬레이션은 스텝을 바꾸면 접촉 순서가 달라져 결과가 완전히 같아지지 않는다.")
         log("        논문에는 '성공 판정이 dt 에 따라 뒤집히는가'와 '충격량이 같은 자릿수인가'를 근거로 제시할 것.")
+        log("  주의: 그물의 스프링 계수는 안정조건에서 dt 로부터 유도되므로, 이 시험에서는 기준 dt 의 계수로")
+        log("        고정해 모델을 붙들어 두고 적분 스텝만 바꿨다. 그러지 않으면 모델이 함께 바뀌어 수렴성을 볼 수 없다.")
         log()
 
     if args.only in (None, "impulse"):
