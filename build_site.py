@@ -44,7 +44,16 @@ import re
 import shutil
 from typing import Dict, List, Optional
 
-import capture_sim as cs
+# 정적 사이트를 만드는 데 물리 엔진은 필요 없다. capture_sim 을 불러올 수 있으면 설정값을 그대로 쓰고,
+# PyBullet 이 없는 환경(배포 서버 등)에서는 궤적 자료에 들어 있는 값과 아래 기본값으로 대체한다.
+try:
+    import capture_sim as _cs
+    CONFIG: Optional[Dict] = _cs.CONFIG
+except Exception:
+    CONFIG = None
+
+ASSET_PATHS = {"three_js": "assets/three.min.js", "earth_texture": "assets/earth.jpg"}
+DEFAULT_TIMESTEP = 1.0 / 480.0
 
 METHOD_LABELS = {"arm": "로봇팔", "net": "그물", "harpoon": "작살"}
 TARGET_LABELS = {"small": "소형 10 kg", "medium": "중형 500 kg", "large": "대형 2000 kg"}
@@ -127,6 +136,23 @@ footer{margin-top:36px;color:var(--muted);font-size:12px;font-family:var(--mono)
 """
 
 
+def scene_facts(runs: List[Dict]) -> Dict:
+    """색인 페이지에 쓸 설정값. capture_sim 이 있으면 그쪽을, 없으면 궤적 자료를 쓴다."""
+    st = runs[0]["data"].get("static", {}) if runs else {}
+    success = st.get("success") or {}
+    orbit = st.get("orbit") or {}
+    if CONFIG is not None:
+        success = CONFIG["success"]
+        orbit = CONFIG["orbit"]
+    return {
+        "threshold": float(success.get("rel_omega_threshold_deg_s", 1.0)),
+        "hold": float(success.get("hold_time", 3.0)),
+        "altitude": float(orbit.get("altitude_km", 500.0)),
+        "timestep": float(CONFIG["sim"]["timestep"]) if CONFIG is not None
+        else float(st.get("timestep", DEFAULT_TIMESTEP)),
+    }
+
+
 def build_index(runs: List[Dict]) -> str:
     cards = []
     for r in runs:
@@ -151,7 +177,7 @@ def build_index(runs: List[Dict]) -> str:
           <div class="stat"><div class="k">서비서 자세 변화</div><div class="v">{float(res.get('servicer_attitude_error', 0)):.0f}°</div></div>
         </div>
       </a>""")
-    cfg = cs.CONFIG
+    fx = scene_facts(runs)
     return f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -180,13 +206,13 @@ def build_index(runs: List[Dict]) -> str:
       <b>보는 법.</b> 마우스 드래그로 회전, 휠로 확대·축소, Shift 드래그로 이동한다.
       키 1~4 로 카메라 추적 대상을 바꾸고 Space 로 재생과 정지를 전환한다. 자세한 조작은 화면 우측 아래 "조작법" 에 있다.
       오른쪽 그래프의 가로 점선은 포획 성공 기준인 상대 각속도
-      {cfg['success']['rel_omega_threshold_deg_s']:.0f} deg/s 이고, 초록 음영은 결합이 유지된 구간이다.
+      {fx['threshold']:.0f} deg/s 이고, 초록 음영은 결합이 유지된 구간이다.
       <br><br>
       <b>성공 판정.</b> 대상과 서비스 위성의 상대 각속도가
-      {cfg['success']['rel_omega_threshold_deg_s']:.0f} deg/s 이하로 떨어지고 그 상태가
-      {cfg['success']['hold_time']:.0f} 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
+      {fx['threshold']:.0f} deg/s 이하로 떨어지고 그 상태가
+      {fx['hold']:.0f} 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
     </div>
-    <footer>고도 {cfg['orbit']['altitude_km']:.0f} km 기준 궤도 · 적분 간격 1/{round(1 / cfg['sim']['timestep'])} s · 2026 공군사관학교 미래 항공우주 학술대회</footer>
+    <footer>고도 {fx['altitude']:.0f} km 기준 궤도 · 적분 간격 1/{round(1 / fx['timestep'])} s · 2026 공군사관학교 미래 항공우주 학술대회</footer>
   </div>
 </body>
 </html>
@@ -218,8 +244,9 @@ def build(inputs: List[str], out_dir: str) -> List[Dict]:
         os.makedirs(os.path.join(out_dir, sub), exist_ok=True)
 
     # 공유 자산
-    for src_rel, dst in ((cs.CONFIG["scene"]["three_js"], "three.min.js"),
-                         (cs.CONFIG["scene"]["earth_texture"], "earth.jpg")):
+    three = CONFIG["scene"]["three_js"] if CONFIG is not None else ASSET_PATHS["three_js"]
+    earth = CONFIG["scene"]["earth_texture"] if CONFIG is not None else ASSET_PATHS["earth_texture"]
+    for src_rel, dst in ((three, "three.min.js"), (earth, "earth.jpg")):
         src = os.path.join(here, src_rel)
         if not os.path.exists(src):
             raise SystemExit(f"공유 자산이 없다: {src}")

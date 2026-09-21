@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>회전 우주 파편 포획 시뮬레이션</title>
+<meta name="description" content="로봇팔·그물·작살의 포획 순간을 물리 시뮬레이션으로 비교한 3D 리플레이">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#05070d;--panel:rgba(13,18,30,.85);--line:#223047;--text:#e8ecf4;
+--muted:#8d97ad;--accent:#5fc9ff;--good:#4ad494;--bad:#ff6b6b;
+--font:"IBM Plex Sans","Malgun Gothic",system-ui,sans-serif;--mono:"IBM Plex Mono",Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);
+background-image:radial-gradient(ellipse at 50% -20%,rgba(50,90,160,.30),transparent 60%)}
+.wrap{max-width:1040px;margin:0 auto;padding:48px 16px 72px}
+header{margin-bottom:36px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+h1{margin:10px 0 12px;font-size:30px;font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+.lede{margin:0;color:var(--muted);font-size:15px;line-height:1.65;max-width:62ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;margin-top:32px}
+.card{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);
+border-radius:12px;padding:18px;transition:border-color .15s,transform .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card h2{margin:0 0 4px;font-size:17px;font-weight:600}
+.card .sub{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.tag{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:999px;
+border:1px solid var(--line);color:var(--text);background:rgba(255,255,255,.03)}
+.tag.ok{border-color:rgba(74,212,148,.5);color:var(--good)}
+.tag.no{border-color:rgba(255,107,107,.5);color:var(--bad)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:14px;
+border-top:1px dashed var(--line)}
+.stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
+.note{margin-top:40px;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel);
+color:var(--muted);font-size:13px;line-height:1.7}
+.note b{color:var(--text);font-weight:600}
+footer{margin-top:36px;color:var(--muted);font-size:12px;font-family:var(--mono)}
+@media (max-width:520px){h1{font-size:24px}.wrap{padding:32px 16px 56px}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">PyBullet · LVLH 상대 궤도 역학</div>
+      <h1>회전 우주 파편 포획 시뮬레이션</h1>
+      <p class="lede">
+        회전하는 우주 파편을 포획할 때 대상의 회전 속도와 질량에 따라 로봇팔·그물·작살 중 어떤 방식이
+        유효한지 비교한다. 아래는 포획 순간을 그대로 재생하는 3D 리플레이다. 물리는 미리 계산된 궤적이며
+        시각화가 결과를 바꾸지 않는다.
+      </p>
+    </header>
+    <div class="grid">
+      <a class="card" href="runs/arm_small_10degs.html">
+        <h2>로봇팔 · 소형 10 kg</h2>
+        <div class="sub">회전 10 deg/s · seed 0</div>
+        <div class="tags">
+          <span class="tag ok">포획 성공</span>
+          <span class="tag">8 s 재생</span>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="k">감속 시간</div><div class="v">1.2 s</div></div>
+          <div class="stat"><div class="k">최대 충격량</div><div class="v">2.2 N·s</div></div>
+          <div class="stat"><div class="k">잔류 상대 각속도</div><div class="v">0.00 °/s</div></div>
+          <div class="stat"><div class="k">서비서 자세 변화</div><div class="v">21°</div></div>
+        </div>
+      </a>
+      <a class="card" href="runs/net_medium_10degs.html">
+        <h2>그물 · 중형 500 kg</h2>
+        <div class="sub">회전 10 deg/s · seed 0</div>
+        <div class="tags">
+          <span class="tag ok">포획 성공</span>
+          <span class="tag">106 s 재생</span>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="k">감속 시간</div><div class="v">102.0 s</div></div>
+          <div class="stat"><div class="k">최대 충격량</div><div class="v">193.3 N·s</div></div>
+          <div class="stat"><div class="k">잔류 상대 각속도</div><div class="v">0.71 °/s</div></div>
+          <div class="stat"><div class="k">서비서 자세 변화</div><div class="v">164°</div></div>
+        </div>
+      </a>
+      <a class="card" href="runs/harpoon_medium_10degs.html">
+        <h2>작살 · 중형 500 kg</h2>
+        <div class="sub">회전 10 deg/s · seed 0</div>
+        <div class="tags">
+          <span class="tag ok">포획 성공</span>
+          <span class="tag">130 s 재생</span>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="k">감속 시간</div><div class="v">126.3 s</div></div>
+          <div class="stat"><div class="k">최대 충격량</div><div class="v">87.0 N·s</div></div>
+          <div class="stat"><div class="k">잔류 상대 각속도</div><div class="v">0.48 °/s</div></div>
+          <div class="stat"><div class="k">서비서 자세 변화</div><div class="v">180°</div></div>
+        </div>
+      </a>
+    </div>
+    <div class="note">
+      <b>보는 법.</b> 마우스 드래그로 회전, 휠로 확대·축소, Shift 드래그로 이동한다.
+      키 1~4 로 카메라 추적 대상을 바꾸고 Space 로 재생과 정지를 전환한다. 자세한 조작은 화면 우측 아래 "조작법" 에 있다.
+      오른쪽 그래프의 가로 점선은 포획 성공 기준인 상대 각속도
+      1 deg/s 이고, 초록 음영은 결합이 유지된 구간이다.
+      <br><br>
+      <b>성공 판정.</b> 대상과 서비스 위성의 상대 각속도가
+      1 deg/s 이하로 떨어지고 그 상태가
+      3 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
+    </div>
+    <footer>고도 500 km 기준 궤도 · 적분 간격 1/480 s · 2026 공군사관학교 미래 항공우주 학술대회</footer>
+  </div>
+</body>
+</html>

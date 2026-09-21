@@ -260,7 +260,15 @@ site/
   vercel.json          캐시 헤더
 ```
 
-**Vercel 배포.** `site/` 를 그대로 올리면 된다. 계정 로그인은 브라우저에서 한 번 필요하다.
+**배포 방법 1 — GitHub 연동 (권장).** 저장소 루트의 [vercel.json](vercel.json) 이 출력 폴더를 `site/` 로
+지정해 두었으므로, Vercel 에서 이 저장소를 Import 하면 별도 설정 없이 배포된다. 빌드 명령도 필요 없다.
+이후 `git push` 할 때마다 자동으로 다시 배포된다.
+
+이 방식은 **`site/` 가 저장소에 들어 있어야 동작한다.** Git 연동 배포는 저장소에 있는 파일만 올리기 때문이다.
+그래서 `site/` 는 생성물이지만 예외적으로 git 추적 대상에 둔다. 리플레이를 새로 만들었다면
+`python build_site.py` 로 다시 빌드한 뒤 커밋해야 배포본에 반영된다.
+
+**배포 방법 2 — CLI 직접 배포.** 저장소와 무관하게 로컬 폴더를 바로 올린다.
 
 ```bash
 npx vercel --cwd site           # 미리보기 URL 발급
@@ -269,6 +277,9 @@ npx vercel --cwd site --prod    # 운영 URL 발급
 
 Netlify(`npx netlify deploy --dir site --prod`)나 GitHub Pages 처럼 정적 파일을 그대로 서빙하는 곳이면
 어디든 같은 방식으로 올라간다. 서버 코드가 없어 무료 플랜으로 충분하다.
+
+빌드에는 물리 엔진이 필요 없다. `build_site.py` 는 `capture_sim` 을 불러올 수 없는 환경에서도
+궤적 자료에 들어 있는 값으로 대신 동작하므로, PyBullet 이 없는 배포 서버에서도 실행할 수 있다.
 
 `index.html` 은 검색 엔진이 수집할 수 있는 공개 페이지가 된다. 발표 전에 공개하고 싶지 않다면
 Vercel 프로젝트 설정에서 비밀번호 보호를 걸거나 미리보기 URL 만 공유할 것.
