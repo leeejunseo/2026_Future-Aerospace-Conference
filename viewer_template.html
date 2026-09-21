@@ -178,7 +178,9 @@
 <!--__THREE_INLINE__--><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function () {
-  const DATA = /*__DATA_JSON__*/null;
+  // 자기 완결형 빌드에서는 아래 자리에 궤적 JSON 이 직접 박히고,
+  // 웹 배포용 빌드에서는 별도 파일이 window.__DEBRIS_DATA__ 에 먼저 넣어 둔다.
+  const DATA = /*__DATA_JSON__*/window.__DEBRIS_DATA__ || null;
   const EARTH_URI = "__EARTH_DATA_URI__";
   const app = document.getElementById("app");
   if (!window.THREE) {
@@ -264,7 +266,8 @@
     const alpha = Math.asin(o.earth_radius_km / (o.earth_radius_km + o.altitude_km));
     const Rv = 1500, dist = Rv / Math.sin(alpha);
     const mat = new THREE.MeshStandardMaterial({ color: 0x6f8fd0, roughness: 1, metalness: 0 });
-    if (EARTH_URI && EARTH_URI.startsWith("data:")) {
+    // data: URI(자기 완결형)든 상대 경로(웹 배포용)든 모두 받는다
+    if (EARTH_URI && !EARTH_URI.startsWith("__")) {
       new THREE.TextureLoader().load(EARTH_URI, (tex) => { tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 8; mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true; });
     }
     const earth = new THREE.Mesh(new THREE.SphereGeometry(Rv, 128, 96), mat);

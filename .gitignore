@@ -4,6 +4,7 @@ results/
 sensitivity/
 comparison/
 report/
+site/
 verification/
 __pycache__/
 *.pyc

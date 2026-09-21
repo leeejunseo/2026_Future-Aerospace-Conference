@@ -43,6 +43,7 @@ python capture_sim.py --method arm --target medium --spin 10
 | [run_verification.py](run_verification.py) | 수치 검증. 논문 부록용 |
 | [run_sensitivity.py](run_sensitivity.py) | 가정값 민감도 분석 |
 | [make_report.py](make_report.py) | 산출물에서 논문용 표·수치를 뽑아 정리 |
+| [build_site.py](build_site.py) | 리플레이를 웹 배포용 정적 사이트로 묶음 |
 | [viewer_template.html](viewer_template.html) | 웹 3D 리플레이 뷰어의 UI 틀 |
 | `assets/` | 지구 텍스처(NASA Blue Marble), 뷰어에 내장할 three.js |
 | `demo/` | 방식별 샘플 리플레이. 브라우저로 바로 열면 된다 |
@@ -235,6 +236,42 @@ python capture_sim.py --method arm --target large --spin 20 --viewer arm20.html 
 - 스프링·회전축·파지점·궤적·지구 표시 토글, 스크린샷, 전체화면. `?` 또는 `H` 로 조작법.
 
 지구 텍스처와 three.js 를 모두 내장하므로 인터넷 없이 열린다. 파일은 시행 길이에 따라 1~7 MB 다.
+
+### 웹 배포 (`build_site.py`)
+
+리플레이를 인터넷에 올리려면 자기 완결형 HTML 을 그대로 올리는 대신 정적 사이트로 묶는 편이 낫다.
+자기 완결형 파일은 three.js(590 kB)와 지구 텍스처(230 kB)를 파일마다 내장해서 여러 개를 올리면 중복되기 때문이다.
+
+```bash
+python build_site.py                 # demo/*.html 로 site/ 생성
+python build_site.py --serve         # 빌드 후 http://localhost:8000 에서 확인
+python build_site.py --inputs a.json b.html --out site
+```
+
+이미 만들어 둔 리플레이 HTML 에서 궤적을 도로 꺼내 쓰므로 **재시뮬레이션이 필요 없다.**
+궤적 JSON(`--trajectory`)을 직접 줘도 된다.
+
+```
+site/
+  index.html          시행 목록 (성공 여부·감속 시간·충격량 요약)
+  runs/<이름>.html     뷰어. 공유 자산을 참조한다
+  data/<이름>.js       궤적 자료
+  assets/              three.min.js, earth.jpg (한 번만 올라간다)
+  vercel.json          캐시 헤더
+```
+
+**Vercel 배포.** `site/` 를 그대로 올리면 된다. 계정 로그인은 브라우저에서 한 번 필요하다.
+
+```bash
+npx vercel --cwd site           # 미리보기 URL 발급
+npx vercel --cwd site --prod    # 운영 URL 발급
+```
+
+Netlify(`npx netlify deploy --dir site --prod`)나 GitHub Pages 처럼 정적 파일을 그대로 서빙하는 곳이면
+어디든 같은 방식으로 올라간다. 서버 코드가 없어 무료 플랜으로 충분하다.
+
+`index.html` 은 검색 엔진이 수집할 수 있는 공개 페이지가 된다. 발표 전에 공개하고 싶지 않다면
+Vercel 프로젝트 설정에서 비밀번호 보호를 걸거나 미리보기 URL 만 공유할 것.
 
 ### PyBullet 내장 GUI
 
