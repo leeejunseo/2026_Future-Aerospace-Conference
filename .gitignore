@@ -1,0 +1,10 @@
+# 생성물 (스크립트로 언제든 재생성 가능)
+logs/
+results/
+sensitivity/
+verification/
+__pycache__/
+*.pyc
+# 녹화 프레임·영상
+frames_*/
+*.mp4
