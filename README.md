@@ -39,6 +39,7 @@ python capture_sim.py --method arm --target medium --spin 10
 | [capture_sim.py](capture_sim.py) | 시뮬레이터 본체. 모든 물리 상수와 가정값이 상단 `CONFIG` 에 모여 있다 |
 | [run_all.sh](run_all.sh) | 격자 실험 → 수치 검증 → 민감도 분석을 순차 실행하는 구동 스크립트 |
 | [run_grid_experiment.py](run_grid_experiment.py) | 본 실험. 회전 속도 × 질량 × 방식 격자를 몬테카를로로 반복 |
+| [analyze_compare.py](analyze_compare.py) | 방식 간 짝지은 통계 비교 (McNemar · 부트스트랩 · Wilcoxon) |
 | [run_verification.py](run_verification.py) | 수치 검증. 논문 부록용 |
 | [run_sensitivity.py](run_sensitivity.py) | 가정값 민감도 분석 |
 | [make_report.py](make_report.py) | 산출물에서 논문용 표·수치를 뽑아 정리 |
@@ -46,7 +47,8 @@ python capture_sim.py --method arm --target medium --spin 10
 | `assets/` | 지구 텍스처(NASA Blue Marble), 뷰어에 내장할 three.js |
 | `demo/` | 방식별 샘플 리플레이. 브라우저로 바로 열면 된다 |
 
-생성물(`results/` `verification/` `sensitivity/` `report/` `logs/`)은 git 추적에서 제외한다. 스크립트로 언제든 재생성된다.
+생성물(`results/` `comparison/` `verification/` `sensitivity/` `report/` `logs/`)은 git 추적에서 제외한다.
+스크립트로 언제든 재생성된다.
 
 ---
 
@@ -56,7 +58,7 @@ python capture_sim.py --method arm --target medium --spin 10
 
 ```bash
 bash run_all.sh 11          # 워커 11개로 전체
-bash run_all.sh 11 grid     # 단계 선택: grid | verify | sens
+bash run_all.sh 11 grid     # 단계 선택: grid | compare | verify | sens
 ```
 
 세 단계 모두 `--resume` 을 지원하므로 중단 후 같은 명령을 다시 실행하면 이어서 진행한다.
@@ -66,7 +68,8 @@ bash run_all.sh 11 grid     # 단계 선택: grid | verify | sens
 
 | 단계 | 시행 수 | 예상 소요 |
 |---|---|---|
-| 격자 실험 | 4320 | 약 16시간 |
+| 격자 실험 | 4320 | 약 13시간 |
+| 방식 간 통계 비교 | 계산 없음 | 수 초 |
 | 수치 검증 | 12 | 약 1시간 |
 | 민감도 분석 | 1422 | 약 6시간 |
 
@@ -274,6 +277,33 @@ python run_verification.py --only dt    # 시간 스텝 수렴만
 결과는 `verification/verification_report.txt` 에 정리된다.
 
 ---
+
+## 방식 간 통계 비교 (`analyze_compare.py`)
+
+격자 실험은 같은 반복 번호에 모든 조합이 같은 시드를 쓰도록 설계되어 있다(공통 난수).
+따라서 같은 (대상, 회전 속도, 시드)에서 나온 두 방식의 결과는 **짝지어진 관측**이고,
+짝지은 검정을 쓰면 시드에서 오는 변동이 상쇄되어 훨씬 작은 표본으로도 차이를 가릴 수 있다.
+
+조합별 신뢰구간만으로는 "로봇팔이 그물보다 유의하게 낫다"를 말할 수 없다. 이 분석이 그 부분을 채운다.
+추가 시뮬레이션 없이 기존 격자 자료만으로 수 초 만에 끝난다.
+
+```bash
+python analyze_compare.py
+```
+
+| 검정 | 대상 지표 | 쓰는 이유 |
+|---|---|---|
+| McNemar 정확검정 | 성공 여부 | 불일치 쌍만 쓰는 짝지은 이진 검정 |
+| 짝지은 부트스트랩 | 성공률 차이 | 효과 크기와 95 % 신뢰구간 |
+| Wilcoxon 부호순위 | 잔류 상대 각속도 | 연속 지표라 성공에 못 미친 차이까지 잡는다 |
+
+방식쌍 3개 × 대상 3개로 검정이 여러 번이므로 Holm-Bonferroni 로 보정한 p 값을 함께 낸다.
+회전 속도별 표(`compare_by_spin.csv`)는 탐색용이며, 결론은 대상별 통합 결과로 말하는 편이 안전하다.
+
+출력은 `comparison/` 에 쌓인다. `method_ranking.csv`(대상별 순위와 1위·2위 유의성),
+`compare_by_target.csv`(주 결과), `compare_by_spin.csv`(탐색용), `comparison_report.txt`(사람이 읽을 표).
+
+검정 자체는 차이를 심은 합성 자료로 복원되는지, 차이가 없는 자료에서 거짓 양성이 없는지 둘 다 확인했다.
 
 ## 가정값 민감도 분석
 
