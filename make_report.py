@@ -75,9 +75,11 @@ def collect_assumptions(path: str = "capture_sim.py") -> List[Dict]:
 # CSV 읽기
 # =============================================================================
 def read_csv(path: str) -> List[Dict]:
+    # utf-8-sig 로 읽으면 엑셀용으로 BOM 을 붙여 저장한 파일도 첫 열 이름이 깨지지 않는다.
+    # BOM 이 없는 파일도 그대로 읽힌다.
     if not os.path.exists(path):
         return []
-    with open(path, newline="", encoding="utf-8") as f:
+    with open(path, newline="", encoding="utf-8-sig") as f:
         return list(csv.DictReader(f))
 
 
@@ -191,6 +193,43 @@ def summarize_sensitivity(summary: List[Dict]) -> List[str]:
     return out
 
 
+def summarize_comparison(by_target: List[Dict], ranking: List[Dict]) -> List[str]:
+    if not by_target:
+        return ["> 방식 간 비교 결과가 아직 없다. `python analyze_compare.py` 로 생성할 것."]
+    out = ["같은 (대상, 회전 속도, 시드)에서 나온 두 방식의 결과는 짝지어진 관측이므로 짝지은 검정을 쓴다.",
+           "성공 여부는 McNemar 정확검정, 성공률 차이는 짝지은 부트스트랩, "
+           "잔류 상대 각속도는 Wilcoxon 부호순위 검정이다.",
+           "방식쌍과 대상에 걸쳐 검정이 여러 번이므로 Holm-Bonferroni 로 보정한 p 값을 쓴다.\n"]
+    out.append("### 표 4. 대상별 방식 순위\n")
+    out.append(md_table(["대상", "순위", "1위 성공률", "2위 성공률", "차이 [%p] (95 % CI)", "p", "유의성"],
+                        [[TARGET_LABELS.get(r["target"], r["target"]).split(" (")[0], r["rank"],
+                          f"{100 * _f(r['best_rate']):.1f}%", f"{100 * _f(r['second_rate']):.1f}%",
+                          f"{100 * _f(r['diff']):+.1f} [{100 * _f(r['diff_ci_low']):+.1f}, "
+                          f"{100 * _f(r['diff_ci_high']):+.1f}]",
+                          f"{_f(r['p']):.1e}",
+                          "유의" if str(r["significant"]).lower() == "true" else "유의하지 않음"]
+                         for r in ranking]))
+    out.append("")
+    out.append("### 표 5. 방식쌍별 짝지은 비교\n")
+    rows = []
+    for r in by_target:
+        rows.append([TARGET_LABELS.get(r["target"], r["target"]).split(" (")[0],
+                     f"{METHOD_LABELS.get(r['method_1'], r['method_1'])} vs "
+                     f"{METHOD_LABELS.get(r['method_2'], r['method_2'])}",
+                     str(int(_f(r["n_pairs"], 0))),
+                     f"{100 * _f(r['diff']):+.1f} [{100 * _f(r['diff_ci_low']):+.1f}, "
+                     f"{100 * _f(r['diff_ci_high']):+.1f}]",
+                     f"{_f(r['mcnemar_p_holm']):.1e}",
+                     f"{_f(r['rel_omega_median_diff']):+.2f}",
+                     f"{_f(r['wilcoxon_p_holm']):.1e}"])
+    out.append(md_table(["대상", "비교", "쌍 수", "성공률 차이 [%p] (95 % CI)", "McNemar p",
+                         "잔류 각속도 차이 [deg/s]", "Wilcoxon p"], rows))
+    out.append("")
+    out.append("성공률 차이는 (앞 방식 − 뒤 방식)이며 신뢰구간이 0 을 포함하지 않으면 유의하다. "
+               "잔류 각속도 차이는 짝별 차이의 중앙값이고 음수이면 앞 방식의 감속이 더 잘 된 것이다.\n")
+    return out
+
+
 def summarize_verification(path: str) -> List[str]:
     if not os.path.exists(path):
         return ["> 수치 검증 결과가 아직 없다. `python run_verification.py` 로 생성할 것."]
@@ -211,9 +250,11 @@ def summarize_verification(path: str) -> List[str]:
 # =============================================================================
 # 보고서 작성
 # =============================================================================
-def build_report(res_dir: str, ver_dir: str, sens_dir: str) -> str:
+def build_report(res_dir: str, ver_dir: str, sens_dir: str, cmp_dir: str = "comparison") -> str:
     summary = read_csv(os.path.join(res_dir, "results_summary.csv"))
     sens = read_csv(os.path.join(sens_dir, "sensitivity_summary.csv"))
+    cmp_by_target = read_csv(os.path.join(cmp_dir, "compare_by_target.csv"))
+    cmp_ranking = read_csv(os.path.join(cmp_dir, "method_ranking.csv"))
     assumptions = collect_assumptions()
     todo = [a for a in assumptions if a["needs_source"]]
 
@@ -237,20 +278,23 @@ def build_report(res_dir: str, ver_dir: str, sens_dir: str) -> str:
     L.append("## 2. 결과\n")
     L += summarize_results(summary)
 
-    L.append("## 3. 수치 검증\n")
+    L.append("## 3. 방식 간 통계 비교\n")
+    L += summarize_comparison(cmp_by_target, cmp_ranking)
+
+    L.append("## 4. 수치 검증\n")
     L += summarize_verification(os.path.join(ver_dir, "verification_report.txt"))
 
-    L.append("## 4. 가정값 민감도\n")
+    L.append("## 5. 가정값 민감도\n")
     L += summarize_sensitivity(sens)
 
-    L.append("## 5. 가정값 목록\n")
+    L.append("## 6. 가정값 목록\n")
     L.append(f"전체 가정값은 {len(assumptions)}개이고, 그중 문헌 근거를 확인하지 못한 값이 {len(todo)}개다. "
              "전체 표는 `report/assumptions.tsv` 에 있다. 아래는 출처 확인이 필요한 값만 추린 것이다.\n")
     L.append(md_table(["구분", "항목", "값", "메모"],
                       [[a["section"], a["key"], a["value"], a["note"][:60]] for a in todo]))
     L.append("")
 
-    L.append("## 6. 그림 캡션 초안\n")
+    L.append("## 7. 그림 캡션 초안\n")
     L.append("- 그림 1. 포획 방식별 회전 속도와 대상 질량에 따른 포획 성공률. "
              "각 칸은 같은 조건을 시드를 바꿔 반복한 시행의 성공 비율이다. (`results/heatmap_success.png`)")
     L.append("- 그림 2. 시행 종료 시점의 잔류 상대 각속도 중앙값. "
@@ -264,7 +308,7 @@ def build_report(res_dir: str, ver_dir: str, sens_dir: str) -> str:
     L.append("- 그림 6. 가정값 민감도. 막대는 각 값을 낮음/높음으로 바꿨을 때 기준 대비 변화량이다. "
              "(`sensitivity/sensitivity_tornado_rel_omega.png`)\n")
 
-    L.append("## 7. 방법론에 반드시 적을 것\n")
+    L.append("## 8. 방법론에 반드시 적을 것\n")
     L.append("1. 그물과 작살의 감속은 전적으로 테더 윈치의 정장력 제어에 의존한다. "
              "윈치가 없으면 테더가 팽팽해지지 않아 각운동량 전달 경로 자체가 없다.")
     L.append("2. 테더 감쇠가 부족하면 대상이 테더에 매달려 진동이 남는다. "
@@ -283,6 +327,7 @@ def main(argv=None):
     ap.add_argument("--results", default="results")
     ap.add_argument("--verification", default="verification")
     ap.add_argument("--sensitivity", default="sensitivity")
+    ap.add_argument("--comparison", default="comparison")
     ap.add_argument("--out", default="report")
     ap.add_argument("--only", choices=["assumptions", "report"], default=None)
     args = ap.parse_args(argv)
@@ -299,7 +344,7 @@ def main(argv=None):
     if args.only == "assumptions":
         return
 
-    text = build_report(args.results, args.verification, args.sensitivity)
+    text = build_report(args.results, args.verification, args.sensitivity, args.comparison)
     rp = os.path.join(args.out, "report.md")
     with open(rp, "w", encoding="utf-8") as f:
         f.write(text)

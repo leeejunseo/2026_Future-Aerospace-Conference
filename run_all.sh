@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # 전체 연구 계산을 순서대로 실행한다 (CPU 경합을 피하려 순차 실행).
 #   1) 본 격자 몬테카를로 실험   -> results/
-#   2) 수치 검증 (스텝 수렴 등)  -> verification/
-#   3) 가정값 민감도 분석        -> sensitivity/
+#   2) 방식 간 짝지은 통계 비교   -> comparison/   (격자 자료만 있으면 되므로 몇 초면 끝난다)
+#   3) 수치 검증 (스텝 수렴 등)  -> verification/
+#   4) 가정값 민감도 분석        -> sensitivity/
 #
 # 각 단계는 --resume 을 지원하므로 중단 후 이 스크립트를 다시 실행하면 이어서 진행된다.
 # 한 단계를 중단(Ctrl+C 또는 프로세스 종료)하면 다음 단계로 넘어가지 않고 전체가 멈춘다.
@@ -10,7 +11,7 @@
 # 사용법:
 #   bash run_all.sh            # 워커 10개로 1~3 단계 전부
 #   bash run_all.sh 8          # 워커 8개
-#   bash run_all.sh 10 grid    # 특정 단계만 (grid | verify | sens)
+#   bash run_all.sh 10 grid    # 특정 단계만 (grid | compare | verify | sens)
 set -u
 PY="${DEBRIS_PY:-C:/Users/User/anaconda3/envs/debris-sim/python.exe}"
 W="${1:-10}"
@@ -38,16 +39,21 @@ run_step() {
 }
 
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "grid" ]; then
-    run_step "1/3 격자 몬테카를로 실험 (workers=$W)" logs/grid.log \
+    run_step "1/4 격자 몬테카를로 실험 (workers=$W)" logs/grid.log \
         "$PY" run_grid_experiment.py --workers "$W" --resume --out results
 fi
+if [ "$ONLY" = "all" ] || [ "$ONLY" = "compare" ]; then
+    run_step "2/4 방식 간 짝지은 통계 비교" logs/comparison.log \
+        "$PY" analyze_compare.py --results results --out comparison
+fi
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "verify" ]; then
-    run_step "2/3 수치 검증" logs/verification.log \
+    run_step "3/4 수치 검증" logs/verification.log \
         "$PY" run_verification.py --out verification
 fi
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "sens" ]; then
-    run_step "3/3 가정값 민감도 분석 (workers=$W)" logs/sensitivity.log \
+    run_step "4/4 가정값 민감도 분석 (workers=$W)" logs/sensitivity.log \
         "$PY" run_sensitivity.py --workers "$W" --repeats 6 --spins 12 --resume --out sensitivity
 fi
 
-echo "[$(stamp)] === 완료. results/ verification/ sensitivity/ 확인 ==="
+echo "[$(stamp)] === 완료. results/ comparison/ verification/ sensitivity/ 확인 ==="
+echo "[$(stamp)] 보고서 생성: python make_report.py"
