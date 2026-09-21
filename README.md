@@ -46,6 +46,7 @@ python capture_sim.py --method arm --target medium --spin 10
 | [viewer_template.html](viewer_template.html) | 웹 3D 리플레이 뷰어의 UI 틀 |
 | `assets/` | 지구 텍스처(NASA Blue Marble), 뷰어에 내장할 three.js |
 | `demo/` | 방식별 샘플 리플레이. 브라우저로 바로 열면 된다 |
+| `manuscript/` | 학술대회 원고 초안. 한글 템플릿 구조를 그대로 따랐다 |
 
 생성물(`results/` `comparison/` `verification/` `sensitivity/` `report/` `logs/`)은 git 추적에서 제외한다.
 스크립트로 언제든 재생성된다.
@@ -75,6 +76,8 @@ bash run_all.sh 11 grid     # 단계 선택: grid | compare | verify | sens
 
 ### 2. 보고서 생성
 
+계산이 끝나면 아래 한 줄로 논문용 표와 수치가 정리된다.
+
 ```bash
 python make_report.py
 ```
@@ -87,6 +90,15 @@ python make_report.py
 ```bash
 python make_report.py --only assumptions
 ```
+
+### 3. 원고 작성
+
+[manuscript/원고_초안.md](manuscript/원고_초안.md) 가 학술대회 한글 템플릿의 장·절 구조를 그대로 따른 본문 초안이다.
+모델링과 실험 설계는 이미 채워져 있고, 결과가 들어갈 자리는 `【결과 대기】` 로 표시해 두었다.
+한글에서 템플릿을 열고 옮겨 붙인 뒤 서식만 지정하면 된다.
+
+참고문헌은 비워 두었다. 기억에 의존한 인용을 피하기 위해서이며, 민감도 분석에서 영향이 큰 것으로 나온
+가정값부터 실제 문헌을 찾아 채우는 것이 순서다. 무엇을 찾아야 하는지는 초안의 참고문헌 표에 정리해 두었다.
 
 ---
 
