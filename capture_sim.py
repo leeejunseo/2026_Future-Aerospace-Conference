@@ -60,7 +60,8 @@ CONFIG: Dict = {
     # ---------------------------------------------------------------- 시뮬레이션
     "sim": {
         "timestep": 1.0 / 480.0,      # PyBullet 기본(1/240)의 절반. 명시적 스프링 안정조건 k*dt^2/m < 0.25, c*dt/m < 0.5 를 위해 축소
-        "max_time": 60.0,             # 포획 시도 최대 시간 [s]. 이 안에 성공 판정이 안 나면 실패  # TODO: 출처 확인 필요
+        # 포획 시도 최대 시간 [s]. 테더 방식(그물·작살)의 감속은 100 s 규모라 60 s 창에서는 방식 비교가 성립하지 않는다.
+        "max_time": 180.0,            # TODO: 출처 확인 필요
         "gravity": (0.0, 0.0, 0.0),   # 궤도상 자유낙하 → 상대운동 좌표계에서 중력 0 (연구 정의)
         "solver_iterations": 150,     # 제약 솔버 반복 횟수. 강성 제약(파지/작살 고정)의 드리프트 억제용  # TODO: 출처 확인 필요
         "gui_realtime": True,         # GUI 모드에서 실시간 속도로 재생
@@ -139,6 +140,7 @@ CONFIG: Dict = {
     # ---------------------------------------------------------------- GUI 장면 연출 (물리에 영향 없음)
     "scene": {
         "earth_texture": "assets/earth.jpg",  # NASA Blue Marble (land_shallow_topo_2048). 없으면 단색 구
+        "three_js": "assets/three.min.js",  # 웹 뷰어에 내장할 three.js. 없으면 CDN 에서 불러오므로 인터넷 필요
         "earth_visual_radius_m": 300.0,  # 지구를 실제 크기 대신 축소 구로 표현. 거리는 실제 고도에서 보이는 각크기(반각 asin(Re/(Re+h)))와 일치시킴 (GUI 원거리 클리핑 ~1000 m 이내)
         "stars": 2000,                   # 배경 별(디버그 포인트) 개수
         "star_distance_m": 900.0,        # GUI 원거리 클리핑(~1000 m) 이내
@@ -209,9 +211,19 @@ CONFIG: Dict = {
         "open_at_fraction": 0.7,      # 비행 시간의 이 비율 시점에 완전 전개되도록 모서리 추 측방 속도 계산
         "launch_offset": 1.0,         # 서비서 발사구에서 그물 초기 중심까지 거리 [m]
         "launch_angle_error_deg": 1.0,  # 발사 방향 오차 표준편차 (시드 랜덤)  # TODO: 출처 확인 필요
-        "tether_length_factor": 1.5,  # 테더 자유 길이 = 초기 이격 거리 x 이 값
+        # 테더: 포획 직후 팽팽해져야 대상의 각운동량이 서비서로 전달된다(감속 경로).
+        # 자유 길이가 실제 도달 거리보다 길면 인장 전용 스프링이 끝까지 힘을 내지 않아 감속이 전혀 일어나지 않는다.
+        "tether_length_factor": 1.05,  # 테더 자유 길이 = (초기 이격 거리 + 대상 반경) x 이 값  # TODO: 출처 확인 필요
         "tether_k": 2000.0,           # 테더 강성 [N/m]  # TODO: 출처 확인 필요
-        "tether_c": 50.0,             # 테더 감쇠 [N·s/m]  # TODO: 출처 확인 필요
+        "tether_c": 150.0,            # 테더 감쇠 [N·s/m]. 각운동량 전달 시 진동을 흡수  # TODO: 출처 확인 필요
+        # 윈치: 결합 성립 후 테더를 되감아 장력을 유지한다. 실제 그물 포획 임무의 회수 단계에 해당.
+        "winch_enabled": True,
+        "winch_start_delay": 1.0,     # 결합 성립 후 되감기 시작까지 지연 [s]  # TODO: 출처 확인 필요
+        "winch_reel_rate": 0.35,      # 되감기 속도 [m/s]  # TODO: 출처 확인 필요
+        # 최소 자유 길이 비율. 이 값이 크면 되감기 완료 후 테더가 느슨해져 장력이 0 이 되고 감속이 멈춘다.
+        # 작게 두면 스프링이 항상 늘어난 상태가 되어 winch_max_tension 으로 제한되는 "정장력 윈치"로 동작한다.
+        "winch_min_length_factor": 0.04,  # TODO: 출처 확인 필요
+        "winch_max_tension": 250.0,   # 테더 장력 상한 [N]. 초과 시 윈치가 풀려 장력을 유지  # TODO: 출처 확인 필요
         "closing_delay": 0.5,         # 첫 접촉 후 조임(closing) 시작까지 지연 [s]  # TODO: 출처 확인 필요
         "closing_duration": 2.0,      # 둘레 스프링 자유길이 축소에 걸리는 시간 [s]  # TODO: 출처 확인 필요
         "closing_ratio": 0.15,        # 조임 완료 후 둘레 자유길이 비율  # TODO: 출처 확인 필요
@@ -229,13 +241,23 @@ CONFIG: Dict = {
         "min_penetration_speed": 4.0,  # 관통에 필요한 최소 법선 충돌 속도 [m/s]  # TODO: 출처 확인 필요
         "max_incidence_deg": 45.0,    # 관통 허용 최대 입사각 (표면 법선 기준)  # TODO: 출처 확인 필요
         "anchor_break_force": 3000.0,  # 고정부(미늘) 이탈 한계 힘 [N]  # TODO: 출처 확인 필요
-        "tether_length_factor": 1.5,  # 테더 자유 길이 = 초기 이격 거리 x 이 값
+        "tether_length_factor": 1.05,  # 테더 자유 길이 = 초기 이격 거리 x 이 값  # TODO: 출처 확인 필요
         "tether_nodes": 10,           # 테더를 이루는 중간 질점 수 (대상 둘레 감김 표현용)
-        "tether_node_mass": 0.05,     # 테더 질점 질량 [kg] (~0.03 kg/m). 감쇠 안정조건 c*dt/m < 0.5 고려  # TODO: 출처 확인 필요
+        # 테더 질점 질량 [kg]. 총 2 kg (~0.18 kg/m) 급 하중 지지 테더를 가정.
+        # 감쇠 안정조건 c*dt/m < 0.5 때문에 질점이 가벼우면 충분한 감쇠를 줄 수 없고,
+        # 감쇠가 부족하면 대상이 테더에 매달려 계속 진동해 상대 회전이 수렴하지 않는다.
+        "tether_node_mass": 0.2,      # TODO: 출처 확인 필요
         "tether_node_radius": 0.02,   # 테더 질점 충돌 반경 [m]
         "tether_k": 500.0,            # 테더 세그먼트 강성 [N/m]  # TODO: 출처 확인 필요
-        "tether_c": 5.0,              # 테더 세그먼트 감쇠 [N·s/m]  # TODO: 출처 확인 필요
-        "winch_tension": 0.0,         # 윈치 상시 장력 [N]. 0 이면 되감기 없음  # TODO: 출처 확인 필요
+        "tether_c": 30.0,             # 테더 세그먼트 감쇠 [N·s/m]. 테더 진동을 흡수해 상대 회전을 수렴시킨다  # TODO: 출처 확인 필요
+        # 윈치: 관통·고정 후 테더를 되감아 장력을 유지한다. 고정점의 모멘트 암을 통해 대상에 감속 토크가 걸린다.
+        "winch_enabled": True,
+        "winch_start_delay": 0.5,     # 고정 성립 후 되감기 시작까지 지연 [s]  # TODO: 출처 확인 필요
+        "winch_reel_rate": 0.35,      # 되감기 속도 [m/s]  # TODO: 출처 확인 필요
+        # 최소 자유 길이 비율. 이 값이 크면 되감기 완료 후 테더가 느슨해져 장력이 0 이 되고 감속이 멈춘다.
+        # 작게 두면 스프링이 항상 늘어난 상태가 되어 winch_max_tension 으로 제한되는 "정장력 윈치"로 동작한다.
+        "winch_min_length_factor": 0.04,  # TODO: 출처 확인 필요
+        "winch_max_tension": 250.0,   # 테더 장력 상한 [N]. anchor_break_force 보다 충분히 작아야 고정부가 버틴다  # TODO: 출처 확인 필요
         "bounce_fail_delay": 2.0,     # 튕겨나간 뒤 이 시간 후 조기 종료 [s]
         "use_ccd": True,              # 고속 발사체 터널링 방지용 연속 충돌 검출
     },
@@ -616,6 +638,7 @@ class Anchor:
     rest_length: float
     k: float
     c: float
+    max_force: float = float("inf")   # 장력 상한 [N] (윈치 슬립 모델)
 
 
 class SpringNetwork:
@@ -651,6 +674,7 @@ class SpringNetwork:
         self.k = sp[:, 3]
         self.c = sp[:, 4]
         self.anchors: List[Anchor] = []
+        self.tension_cap = float("inf")   # 세그먼트 장력 상한 [N] (윈치 슬립 모델)
         self.debug_ids: List[int] = []
         # 안정성 경고
         dt = world.dt
@@ -693,6 +717,11 @@ class SpringNetwork:
         d = pos[self.sj] - pos[self.si]
         dv = vel[self.sj] - vel[self.si]
         Fv, _ = self._spring_force(d, dv, self.L0, self.k, self.c)
+        if np.isfinite(self.tension_cap):
+            mag = np.linalg.norm(Fv, axis=1)
+            over = mag > self.tension_cap
+            if np.any(over):
+                Fv[over] *= (self.tension_cap / mag[over])[:, None]
         F = np.zeros((self.n, 3))
         np.add.at(F, self.si, Fv)
         np.add.at(F, self.sj, -Fv)
@@ -705,6 +734,9 @@ class SpringNetwork:
             av = np.array(bv) + np.cross(np.array(bw), r)
             Fa, _ = self._spring_force((ap - pos[a.node_idx])[None, :], (av - vel[a.node_idx])[None, :],
                                        np.array([a.rest_length]), np.array([a.k]), np.array([a.c]))
+            mag = float(np.linalg.norm(Fa[0]))
+            if mag > a.max_force:   # 윈치 장력 상한: 초과분은 윈치가 풀리며 흡수
+                Fa[0] *= a.max_force / mag
             F[a.node_idx] += Fa[0]
             p.applyExternalForce(a.body, -1, (-Fa[0]).tolist(), ap.tolist(), p.WORLD_FRAME)
         for i, b in enumerate(self.bodies):
@@ -731,6 +763,39 @@ class SpringNetwork:
             else:
                 p.addUserDebugLine(pos[i].tolist(), pos[j].tolist(), [0.1, 0.8, 0.2], 1.5,
                                    replaceItemUniqueId=self.debug_ids[n])
+
+
+# =============================================================================
+# TetherWinch : 테더 되감기 (그물·작살 공용)
+# =============================================================================
+class TetherWinch:
+    """
+    결합 성립 후 테더의 자유 길이를 일정 속도로 줄여 장력을 유지한다.
+    테더가 대상의 고정점(또는 그물 모서리)에 걸린 상태에서 장력 x 모멘트 암 = 대상에 걸리는 감속 토크가 되고,
+    반작용으로 서비서가 회전하여 두 물체의 상대 각속도가 줄어든다(각운동량은 계 전체에서 보존).
+    장력 상한을 두어 고정부 파손과 수치 발산을 막는다.
+    """
+
+    def __init__(self, cfg: Dict, initial_length: float):
+        self.enabled = bool(cfg["winch_enabled"])
+        self.delay = float(cfg["winch_start_delay"])
+        self.rate = float(cfg["winch_reel_rate"])
+        self.max_tension = float(cfg["winch_max_tension"])
+        self.L0 = float(initial_length)
+        self.L_min = self.L0 * float(cfg["winch_min_length_factor"])
+        self.length = self.L0
+        self.started: Optional[float] = None
+
+    def update(self, t: float, bond_time: Optional[float]) -> float:
+        """현재 테더 자유 길이를 반환. bond_time 은 결합이 성립한 시각(None 이면 대기)"""
+        if not self.enabled or bond_time is None:
+            return self.length
+        if self.started is None:
+            if t < bond_time + self.delay:
+                return self.length
+            self.started = t
+        self.length = max(self.L_min, self.L0 - self.rate * (t - self.started))
+        return self.length
 
 
 # =============================================================================
@@ -1078,11 +1143,13 @@ class NetCapture(CaptureMethod):
         servicer.add_impulse(-(masses[:, None] * (v_world - att_vel)).sum(axis=0))
         # 모서리 4점 ↔ 서비서 발사구 테더 (인장 전용)
         d0 = self.cfg["standoff"]["net"] + target.bounding_radius
-        L_tether = self.ncfg["tether_length_factor"] * d0 + target.bounding_radius
+        L_tether = self.ncfg["tether_length_factor"] * (d0 + target.bounding_radius)
         for ci in corners:
             self.net.anchors.append(Anchor(ci, servicer.body, servicer.attach_local.copy(), L_tether,
-                                           self.ncfg["tether_k"], self.ncfg["tether_c"]))
+                                           self.ncfg["tether_k"], self.ncfg["tether_c"],
+                                           self.ncfg["winch_max_tension"]))
         self.tether_length = L_tether
+        self.winch = TetherWinch(self.ncfg, L_tether)
         self.size = size
 
     def device_bodies(self):
@@ -1097,6 +1164,10 @@ class NetCapture(CaptureMethod):
             s = min(1.0, (self.world.t - self.closing_started) / self.ncfg["closing_duration"])
             ratio = 1.0 + (self.ncfg["closing_ratio"] - 1.0) * s
             self.net.L0[self.perimeter_mask] = self.net.L0_initial[self.perimeter_mask] * ratio
+        # 윈치 되감기: 결합 성립 후 테더 자유 길이를 줄여 장력을 유지 → 대상에 감속 토크
+        self.tether_length = self.winch.update(self.world.t, self.bond_established_time)
+        for a in self.net.anchors:
+            a.rest_length = self.tether_length
         pos = self.net.apply_forces()
         self.net.draw(pos)
 
@@ -1204,10 +1275,13 @@ class HarpoonCapture(CaptureMethod):
         self.tether = SpringNetwork(world, pos, masses, radii, springs, True,
                                     self.cfg["target_dynamics"]["lateral_friction"], 0.0, color=(0.9, 0.6, 0.1, 1))
         self.tether.set_velocity(np.tile(att_vel, (nn, 1)))
-        self.tether.anchors.append(Anchor(0, servicer.body, servicer.attach_local.copy(), seg, h["tether_k"], h["tether_c"]))
+        self.tether.anchors.append(Anchor(0, servicer.body, servicer.attach_local.copy(), seg,
+                                          h["tether_k"], h["tether_c"], h["winch_max_tension"]))
         self.tether.anchors.append(Anchor(nn - 1, self.harpoon, np.array([0, 0, -h["length"] / 2]), seg,
-                                          h["tether_k"], h["tether_c"]))
+                                          h["tether_k"], h["tether_c"], h["winch_max_tension"]))
         self.seg = seg
+        self.tether.tension_cap = h["winch_max_tension"]
+        self.winch = TetherWinch(h, self.tether_length)
 
     def device_bodies(self):
         return [self.harpoon]
@@ -1217,15 +1291,16 @@ class HarpoonCapture(CaptureMethod):
         self._hv_prev = np.array(p.getBaseVelocity(self.harpoon)[0])
         self._hq_prev = p.getBasePositionAndOrientation(self.harpoon)[1]
         self._target_v_prev = self.target.velocity()
+        # 윈치 되감기: 고정 성립 후 테더 전체 자유 길이를 줄인다 (세그먼트와 앵커를 같은 비율로)
+        if self.state == "anchored":
+            L = self.winch.update(self.world.t, self.bond_established_time)
+            scale = L / self.tether_length if self.tether_length > 0 else 1.0
+            if abs(scale - 1.0) > 1e-9:
+                self.tether.L0[:] = self.tether.L0_initial * scale
+                for a in self.tether.anchors:
+                    a.rest_length = self.seg * scale
         pos = self.tether.apply_forces()
         self.tether.draw(pos)
-        w = self.hcfg["winch_tension"]
-        if w > 0 and self.state == "anchored":
-            # 윈치: 발사구에서 첫 테더 질점 방향으로 일정 장력 (단순 모델)
-            att_pos, _ = self.servicer.attach_point_world()
-            u = unit(pos[0] - att_pos)
-            p.applyExternalForce(self.servicer.body, -1, (w * u).tolist(), att_pos.tolist(), p.WORLD_FRAME)
-            p.applyExternalForce(self.tether.bodies[0], -1, (-w * u).tolist(), pos[0].tolist(), p.WORLD_FRAME)
 
     def post_step(self, target_contacts):
         self._update_first_contact(target_contacts)
@@ -1887,7 +1962,7 @@ class TrajectoryRecorder:
 
     @staticmethod
     def build_html(data: Dict, standalone: bool = True) -> str:
-        """viewer_template.html 에 데이터와 지구 텍스처(data URI)를 심어 HTML 문자열 생성"""
+        """viewer_template.html 에 데이터·지구 텍스처·three.js 를 심어 HTML 문자열 생성"""
         import json, base64
         here = os.path.dirname(os.path.abspath(__file__))
         tpl = open(os.path.join(here, "viewer_template.html"), encoding="utf-8").read()
@@ -1898,6 +1973,14 @@ class TrajectoryRecorder:
         payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"),
                              default=TrajectoryRecorder._json_default).replace("</", "<\\/")
         html = tpl.replace("/*__DATA_JSON__*/null", payload).replace("__EARTH_DATA_URI__", earth)
+        # three.js 를 파일에 내장해 오프라인에서도 열리게 한다 (assets/three.min.js 가 있을 때).
+        # 없으면 템플릿의 CDN <script> 가 그대로 남아 인터넷 연결이 필요하다.
+        three = os.path.join(here, CONFIG["scene"]["three_js"])
+        if os.path.exists(three):
+            src = open(three, encoding="utf-8").read().replace("</script", "<\\/script")
+            html = html.replace('<!--__THREE_INLINE__--><script src="https://cdnjs.cloudflare.com/ajax/libs/'
+                                'three.js/r128/three.min.js"></script>',
+                                "<script>" + src + "</script>")
         if standalone:
             html = ('<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n'
                     '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'

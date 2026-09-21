@@ -44,7 +44,7 @@ python capture_sim.py --sweep --spins 0 5 10 20 30 --seeds 0 1 2 --out results.c
 
 ```python
 from capture_sim import run_capture, CONFIG
-CONFIG["harpoon"]["winch_tension"] = 20.0      # 가정값 변경 예
+CONFIG["harpoon"]["winch_max_tension"] = 400.0   # 가정값 변경 예
 r = run_capture("net", "large", spin_deg_s=15, seed=3)
 print(r["success"], r["capture_time"], r["impulse"], r["servicer_attitude_error"])
 ```
@@ -72,14 +72,16 @@ python capture_sim.py --method arm --target large --spin 20 --viewer arm20.html 
 - **표시 토글**: 스프링, 회전축, 파지점, 대상 궤적, 지구.
 - **스크린샷**과 전체화면. `?` 또는 `H` 로 조작법.
 
-뷰어 HTML 은 자기 완결형(지구 텍스처는 data URI 로 내장)이지만 **three.js 는 CDN 에서 불러오므로 인터넷 연결이 필요하다.**
+뷰어 HTML 은 **완전히 자기 완결형**이다. 지구 텍스처와 three.js 를 모두 파일에 내장하므로 인터넷 없이 열린다
+(`assets/three.min.js` 가 있을 때. 없으면 CDN 으로 대체되어 인터넷이 필요하다).
+그만큼 파일이 커서 시행 길이에 따라 1~7 MB 정도가 된다.
 UI 틀은 [viewer_template.html](viewer_template.html) 에 있고, 궤적은 `--trajectory out.json` 으로 따로 저장할 수도 있다.
 
 ## 궤도 환경과 PyBullet 내장 GUI
 
 **궤도 상대 역학 (기본 켜짐, `--no-orbit` 으로 끔)**: 시뮬레이션 좌표계를 기준 원궤도(고도 500 km 가정)의
 LVLH 프레임(x: 진행 방향, z: 천정, y: 궤도면 수직)으로 해석하고, 각 강체에 Hill(Clohessy–Wiltshire) 방정식의
-겉보기 가속도와 중력구배 토크 3n²(r̂×Ir̂)를 매 스텝 외력으로 적용한다. 60 s 포획 구간에서 효과는 mm~cm,
+겉보기 가속도와 중력구배 토크 3n²(r̂×Ir̂)를 매 스텝 외력으로 적용한다. 포획 구간에서 효과는 mm~cm,
 mN·m 수준으로 작지만 실제 궤도 환경을 재현한다. 회전좌표계라 관성 각속도와 상대 각속도가 궤도 각속도(0.06 deg/s)만큼
 다르며, 판정 임계값 1 deg/s 대비 무시 가능하다.
 
@@ -124,12 +126,13 @@ python capture_sim.py --method net --target large --spin 20 --gui --record-frame
 ## 격자 몬테카를로 실험 (`run_grid_experiment.py`)
 
 회전 속도 0~30 deg/s(2 간격) × 질량 3구간 × 방식 3종 × 반복 30회(시드 변경) = 4320 시행을 병렬로 실행한다.
+그물 시행이 감속까지 100 s 규모를 돌기 때문에 전체 소요가 길다. 중단하면 `--resume` 으로 이어서 실행할 수 있다.
 매 반복마다 실제 임무의 불확실성(회전축·회전속도 추정 오차, 상대 위치·잔류 속도 오차, 서비서 지향 오차,
 초기 자세)을 시드로 섭동하며, 같은 반복 번호는 모든 조합에서 같은 시드를 써 방식 간 비교가 짝지어진다.
 
 ```powershell
 conda activate debris-sim
-python run_grid_experiment.py --workers 10           # 전체 격자. 12스레드 노트북 기준 약 5~7시간
+python run_grid_experiment.py --workers 10           # 전체 격자. 12스레드 노트북 기준 8~12시간
 python run_grid_experiment.py --resume --workers 10  # 중단 후 이어서
 python run_grid_experiment.py --plots-only           # CSV 로부터 요약·그래프만 재생성
 python run_grid_experiment.py --spins 0 10 20 30 --repeats 3 --out results_quick   # 빠른 확인용
@@ -162,12 +165,61 @@ python run_grid_experiment.py --spins 0 10 20 30 --repeats 3 --out results_quick
   첫 접촉 후 둘레 스프링 자유길이를 축소하는 조임 기구. 모서리 4점은 서비서와 테더로 연결.
 - 작살: 캡슐 발사체. 충돌 전 법선 속도 ≥ 임계값이고 입사각 ≤ 허용각이면 관통(고정 제약), 아니면 반발.
   테더는 대상 둘레에 감길 수 있도록 질점 체인으로 모델링. 고정부 힘이 한계를 넘으면 이탈.
+- **테더 윈치 (그물·작살 공통)**: 결합이 성립하면 테더 자유 길이를 일정 속도로 줄여 장력을 유지한다.
+  장력 × 모멘트 암이 대상에 감속 토크가 되고 반작용으로 서비서가 회전해 상대 각속도가 줄어든다(각운동량은 계 전체에서 보존).
+  장력은 `winch_max_tension` 으로 제한해 고정부 파손과 수치 발산을 막는다.
+  **이 기구가 없으면 그물·작살에는 감속 경로 자체가 없어 방식 비교가 성립하지 않는다.** 아래 "설계상 중요한 결정" 참조.
+
+## 수치 검증 (`run_verification.py`)
+
+논문 부록에 넣을 검증 세 가지를 자동으로 수행하고 `verification/verification_report.txt` 에 정리한다.
+
+```powershell
+python run_verification.py                # 전체
+python run_verification.py --only dt      # 시간 스텝 수렴만
+```
+
+1. **토크-프리 회전**: 비대칭 관성체의 세차 운동을 오일러 방정식 RK4 기준해와 비교한다.
+   20 s 후 각속도 상대 오차 7.2e-4, 각운동량 상대 오차 7.5e-4 로 통과했다.
+2. **시간 스텝 수렴성**: dt 를 1/240, 1/480, 1/960 로 바꿔 같은 시행의 지표가 수렴하는지 본다.
+   접촉이 있는 다물체 시뮬레이션은 스텝을 바꾸면 접촉 순서가 달라져 완전히 같아지지 않으므로,
+   "성공 판정이 뒤집히는가"와 "충격량이 같은 자릿수인가"를 근거로 제시한다.
+3. **충격량 측정 일관성**: 운동량 변화 누적과 접촉력 적분을 비교한다.
+
+## 가정값 민감도 분석 (`run_sensitivity.py`)
+
+`# TODO: 출처 확인 필요` 로 표시된 값이 결론을 얼마나 흔드는지 One-At-a-Time 방식으로 정량화한다.
+각 파라미터를 낮음/높음 값으로 바꾸고 나머지는 고정한 채 같은 시드 집합으로 돌려 기준 대비 성공률 변화를 본다.
+회전축(z↔x)과 세차 운동 여부도 함께 넣어, 가정값이 아니라 **연구 조건**인 이 둘의 영향도 같은 기준으로 비교한다.
+
+```powershell
+python run_sensitivity.py --repeats 8 --workers 10
+python run_sensitivity.py --plots-only
+```
+
+출력(`sensitivity/`): `sensitivity_raw.csv`, `sensitivity_summary.csv`,
+`sensitivity_tornado.png`(기준 대비 성공률 변화 폭을 파라미터별로 정렬한 토네이도 차트).
+
+## 설계상 중요한 결정 (논문에 반드시 쓸 것)
+
+이 세 가지는 결과를 크게 좌우하므로 방법론 절에 명시해야 한다.
+
+1. **테더 윈치가 그물·작살의 유일한 감속 기구다.**
+   윈치 없이 테더를 느슨하게 두면 인장 전용 스프링이 끝까지 힘을 내지 않아 상대 회전이 전혀 줄지 않는다.
+   실제로 초기 설정(자유 길이 15.7 m, 도달 거리 12.4 m)에서는 테더가 한 번도 팽팽해지지 않아
+   그물·작살이 회전 0 을 빼면 전부 실패했다. 테더 길이를 교전 거리에 맞추고 정장력 윈치를 넣은 뒤에야
+   세 방식 모두 조건에 따라 성공·실패가 갈리는 의미 있는 비교가 되었다.
+2. **테더 감쇠가 부족하면 대상이 테더에 매달려 계속 진동한다.**
+   작살은 감쇠 5 N·s/m 에서 3.7 deg/s 에 머물렀고, 30 N·s/m 에서 126 s 에 성공했다.
+   명시적 적분의 안정조건 `c·dt/m < 0.5` 때문에 감쇠를 키우려면 테더 질점 질량도 함께 키워야 한다.
+3. **시간 창 180 s.** 테더 방식의 감속은 100 s 규모라 60 s 창에서는 비교가 성립하지 않는다.
+   로봇팔은 1~3 s 에 끝나므로, **이 연구의 핵심 지표는 이진 성공 여부보다 감속 소요 시간**이다.
 
 ## 주의
 
 - 모든 가정값은 `capture_sim.py` 상단 `CONFIG` 에 있으며, 문헌 근거가 없는 값은 `# TODO: 출처 확인 필요` 로 표시했다.
-  논문에 쓰기 전에 반드시 출처를 확인하거나 민감도 분석을 수행할 것.
+  논문에 쓰기 전에 출처를 확인하거나 `run_sensitivity.py` 결과로 견고성을 보일 것.
 - 기본 회전축은 z(접근축 x 에 수직). 중형 대상은 태양전지판이 접근 평면을 쓸고 지나가므로
-  팔 방식이 불리하다. 회전축을 x 로 두면(`--spin-axis x`) 파지점이 회전축 위에 온다. 두 시나리오 모두 연구 조건으로 명시할 것.
-- 작살의 상대 회전 감쇄는 테더 장력 제어(`winch_tension`, 기본 0)에 크게 좌우된다.
-- 그물 시행은 질점 수가 많아 1회 약 20~40 초(헤드리스) 소요된다.
+  팔 방식이 불리하다. 회전축을 x 로 두면(`--spin-axis x`) 파지점이 회전축 위에 온다.
+  본 격자는 z 축으로 돌리고, 회전축의 영향은 민감도 분석에서 따로 정량화한다.
+- 그물 시행은 질점 수가 많고 감속에 100 s 규모가 걸려 1회 2~4 분(헤드리스) 소요된다.
