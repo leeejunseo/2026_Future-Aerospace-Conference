@@ -78,6 +78,10 @@ METHOD_COLORS = {"arm": "#2a78d6", "net": "#eb6834", "harpoon": "#1baf7a"}
 SEQUENTIAL_BLUE = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7",
                    "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"]
 
+# 방식별 1회 시행의 벽시계 시간은 자릿수가 다르다 (그물은 질점 81개를 매 스텝 갱신한다).
+# 아직 실측이 없는 방식에 쓸 초기 추정치 [s]. 관측이 쌓이면 실측 평균으로 대체된다.
+WALL_TIME_PRIOR = {"net": 360.0, "harpoon": 90.0, "arm": 25.0}
+
 RAW_FIELDS = ["method", "target", "spin_deg_s", "seed", "rep", "success", "capture_time", "impulse",
               "servicer_attitude_error", "angular_impulse", "peak_contact_force", "max_interaction_force",
               "final_rel_omega_deg_s", "first_contact_time", "bond_intact_final", "sim_time", "wall_time_s", "notes"]
@@ -454,15 +458,29 @@ def main(argv=None):
     t0 = time.time()
     n_done = 0
     rows = list(existing)
+    seen: Dict[str, List[float]] = {}                  # 방식별 실측 벽시계 시간
+    remaining: Dict[str, int] = {}                     # 방식별 남은 작업 수
+    for t in tasks:
+        remaining[t[0]] = remaining.get(t[0], 0) + 1
     try:
         with mp.Pool(args.workers, initializer=_init_worker, initargs=(exp,)) as pool:
             for row in pool.imap_unordered(_run_one, tasks, chunksize=1):
                 wr.writerow(row); f.flush()
                 rows.append(row); n_done += 1
+                seen.setdefault(row["method"], []).append(float(row["wall_time_s"]))
+                remaining[row["method"]] = remaining.get(row["method"], 1) - 1
                 if n_done % 10 == 0 or n_done == total:
                     el = time.time() - t0
-                    eta = el / n_done * (total - n_done)
-                    print(f"[{n_done}/{total}] elapsed {el/60:.1f} min, ETA {eta/60:.1f} min | "
+                    # 남은 작업을 방식별 실측 평균으로 환산한다. 지금까지의 전체 평균을 쓰면
+                    # 느린 방식부터 처리되는 순서 때문에 ETA 가 몇 배로 부풀려진다.
+                    cpu_left = 0.0
+                    for meth, cnt in remaining.items():
+                        obs = seen.get(meth)
+                        mean = (sum(obs) / len(obs)) if obs else WALL_TIME_PRIOR.get(meth, 60.0)
+                        cpu_left += cnt * mean
+                    eta = cpu_left / max(1, args.workers)
+                    rates = " ".join(f"{m}:{sum(v)/len(v):.0f}s" for m, v in sorted(seen.items()))
+                    print(f"[{n_done}/{total}] elapsed {el/60:.1f} min, ETA {eta/60:.0f} min ({rates}) | "
                           f"last: {row['method']} {row['target']} spin={row['spin_deg_s']:g} seed={row['seed']} "
                           f"success={row['success']}", flush=True)
     except KeyboardInterrupt:
