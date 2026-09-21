@@ -55,12 +55,13 @@ PARAMS: List[Dict] = [
     {"path": ("arm", "tool_max_speed"), "name": "그리퍼 접근 속도", "mult": (0.5, 2.0), "methods": ["arm"]},
     {"path": ("arm", "grasp_closure_time"), "name": "그리퍼 닫힘 시간", "mult": (0.5, 2.0), "methods": ["arm"]},
     # ---- 그물
-    {"path": ("net", "spring_k"), "name": "그물실 강성", "mult": (0.5, 2.0), "methods": ["net"]},
+    {"path": ("net", "areal_density"), "name": "그물 면밀도", "mult": (0.5, 2.0), "methods": ["net"]},
+    {"path": ("net", "corner_mass_multiple"), "name": "모서리 추 질량", "mult": (0.5, 2.0), "methods": ["net"]},
     {"path": ("net", "deploy_speed"), "name": "그물 발사 속도", "mult": (0.6, 1.5), "methods": ["net"]},
     {"path": ("net", "closing_ratio"), "name": "그물 조임 비율", "abs": (0.08, 0.35), "methods": ["net"]},
     {"path": ("net", "winch_max_tension"), "name": "그물 윈치 장력", "mult": (0.4, 2.5), "methods": ["net"]},
     {"path": ("net", "winch_reel_rate"), "name": "그물 되감기 속도", "mult": (0.5, 2.0), "methods": ["net"]},
-    {"path": ("net", "tether_c"), "name": "그물 테더 감쇠", "mult": (0.4, 2.0), "methods": ["net"]},
+    {"path": ("net", "tether_c_factor"), "name": "그물 테더 감쇠", "abs": (0.10, 0.45), "methods": ["net"]},
     # ---- 작살
     {"path": ("harpoon", "speed"), "name": "작살 발사 속도", "mult": (0.6, 1.5), "methods": ["harpoon"]},
     {"path": ("harpoon", "min_penetration_speed"), "name": "관통 임계 속도", "mult": (0.5, 2.0), "methods": ["harpoon"]},

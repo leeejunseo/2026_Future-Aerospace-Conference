@@ -199,11 +199,17 @@ CONFIG: Dict = {
     "net": {
         "grid_n": 9,                  # 한 변 질점 수 (9x9 = 81 질점)  # TODO: 출처 확인 필요
         "size_by_target": {"small": 2.0, "medium": 7.0, "large": 5.0},  # 전개 후 한 변 길이 [m], 대상 외접 지름의 ~1.4배  # TODO: 출처 확인 필요
-        "node_mass": 0.05,            # 일반 질점 질량 [kg]  # TODO: 출처 확인 필요
-        "corner_mass": 1.0,           # 모서리 추(bullet) 질량 [kg]  # TODO: 출처 확인 필요
+        # 질량은 그물 면적에 비례한다. 질점 질량을 크기와 무관하게 고정하면 작은 그물이 비현실적으로 무거워져
+        # (2 m 그물이 7.9 kg → 10 kg 대상의 79 %) 대상을 포획하지 않고 쳐서 날려버린다.
+        "areal_density": 0.05,        # 그물 면밀도 [kg/m^2] → 질점 질량 = 면밀도 x 면적 / 질점수  # TODO: 출처 확인 필요
+        "corner_mass_multiple": 20.0,  # 모서리 추 질량 = 일반 질점 질량 x 이 값 (전개용 추)  # TODO: 출처 확인 필요
         "node_radius_ratio": 0.45,    # 질점 충돌 반경 = 격자 간격 x 비율. 격자 사이로 대상이 빠져나가지 않게 하는 모델링 가정
-        "spring_k": 1000.0,           # 그물실 스프링 강성 [N/m]. 안정조건상 상한(≈0.25*m/dt^2)에 가깝게 설정  # TODO: 출처 확인 필요
-        "spring_c": 3.0,              # 그물실 감쇠 [N·s/m]  # TODO: 출처 확인 필요
+        # 스프링 계수는 명시적(반-암시적 오일러) 적분의 안정조건에서 유도한다.
+        #   강성  k <= 0.25 * m / dt^2 , 감쇠  c <= 0.5 * m / dt
+        # 그물 질량이 대상별로 달라지므로 계수를 고정값으로 두면 작은 그물에서 발산한다.
+        # 아래 비율은 안정 한계 대비 여유를 둔 값이며, 그물실은 "안정조건이 허용하는 한 비신축성"으로 모델링된다.
+        "spring_k_factor": 0.20,      # k = 이 값 x m / dt^2  (안정 한계 0.25)
+        "spring_c_factor": 0.30,      # c = 이 값 x m / dt    (안정 한계 0.5)
         "shear_springs": True,        # 대각(전단) 스프링 포함 여부
         "tension_only": True,         # 실은 압축력을 전달하지 않음
         "deploy_speed": 4.0,          # 발사 속도 [m/s]  # TODO: 출처 확인 필요
@@ -214,8 +220,9 @@ CONFIG: Dict = {
         # 테더: 포획 직후 팽팽해져야 대상의 각운동량이 서비서로 전달된다(감속 경로).
         # 자유 길이가 실제 도달 거리보다 길면 인장 전용 스프링이 끝까지 힘을 내지 않아 감속이 전혀 일어나지 않는다.
         "tether_length_factor": 1.05,  # 테더 자유 길이 = (초기 이격 거리 + 대상 반경) x 이 값  # TODO: 출처 확인 필요
-        "tether_k": 2000.0,           # 테더 강성 [N/m]  # TODO: 출처 확인 필요
-        "tether_c": 150.0,            # 테더 감쇠 [N·s/m]. 각운동량 전달 시 진동을 흡수  # TODO: 출처 확인 필요
+        # 테더 계수도 같은 방식으로 모서리 추 질량에서 유도한다 (테더는 모서리 추에 연결된다).
+        "tether_k_factor": 0.20,      # k = 이 값 x 모서리 추 질량 / dt^2
+        "tether_c_factor": 0.30,      # c = 이 값 x 모서리 추 질량 / dt
         # 윈치: 결합 성립 후 테더를 되감아 장력을 유지한다. 실제 그물 포획 임무의 회수 단계에 해당.
         "winch_enabled": True,
         "winch_start_delay": 1.0,     # 결합 성립 후 되감기 시작까지 지연 [s]  # TODO: 출처 확인 필요
@@ -676,6 +683,7 @@ class SpringNetwork:
         self.anchors: List[Anchor] = []
         self.tension_cap = float("inf")   # 세그먼트 장력 상한 [N] (윈치 슬립 모델)
         self.debug_ids: List[int] = []
+        self._refresh_anchor_arrays()
         # 안정성 경고
         dt = world.dt
         ratio = np.max(self.k * dt * dt / np.minimum(self.masses[self.si], self.masses[self.sj]))
@@ -722,27 +730,51 @@ class SpringNetwork:
             over = mag > self.tension_cap
             if np.any(over):
                 Fv[over] *= (self.tension_cap / mag[over])[:, None]
-        F = np.zeros((self.n, 3))
-        np.add.at(F, self.si, Fv)
-        np.add.at(F, self.sj, -Fv)
-        # 앵커(강체 고정점) 스프링
-        for a in self.anchors:
-            bpos, bq = p.getBasePositionAndOrientation(a.body)
-            bv, bw = p.getBaseVelocity(a.body)
-            r = quat_to_R(bq) @ a.local_point
-            ap = np.array(bpos) + r
-            av = np.array(bv) + np.cross(np.array(bw), r)
-            Fa, _ = self._spring_force((ap - pos[a.node_idx])[None, :], (av - vel[a.node_idx])[None, :],
-                                       np.array([a.rest_length]), np.array([a.k]), np.array([a.c]))
-            mag = float(np.linalg.norm(Fa[0]))
-            if mag > a.max_force:   # 윈치 장력 상한: 초과분은 윈치가 풀리며 흡수
-                Fa[0] *= a.max_force / mag
-            F[a.node_idx] += Fa[0]
-            p.applyExternalForce(a.body, -1, (-Fa[0]).tolist(), ap.tolist(), p.WORLD_FRAME)
+        # 스프링 힘을 질점별로 합산. np.add.at 은 같은 일을 하지만 수십 배 느려 시뮬레이션 전체의 병목이 된다.
+        F = np.empty((self.n, 3))
+        for a in range(3):
+            F[:, a] = (np.bincount(self.si, weights=Fv[:, a], minlength=self.n)
+                       - np.bincount(self.sj, weights=Fv[:, a], minlength=self.n))
+        # 앵커(강체 고정점) 스프링. 앵커마다 강체 상태를 따로 읽고 1원소 배열로 계산하면
+        # 파이썬/넘파이 호출 오버헤드가 스텝 비용의 20 % 를 넘으므로, 강체별로 한 번만 읽고 벡터화한다.
+        if self.anchors:
+            bodies = {a.body for a in self.anchors}
+            state = {}
+            for b in bodies:
+                bpos, bq = p.getBasePositionAndOrientation(b)
+                bv, bw = p.getBaseVelocity(b)
+                state[b] = (np.array(bpos), quat_to_R(bq), np.array(bv), np.array(bw))
+            na = len(self.anchors)
+            ap = np.empty((na, 3)); av = np.empty((na, 3))
+            for i, a in enumerate(self.anchors):
+                bpos, R, bv, bw = state[a.body]
+                r = R @ a.local_point
+                ap[i] = bpos + r
+                av[i] = bv + np.cross(bw, r)
+            Fa, _ = self._spring_force(ap - pos[self.anchor_nodes], av - vel[self.anchor_nodes],
+                                       self.anchor_L0, self.anchor_k, self.anchor_c)
+            mag = np.linalg.norm(Fa, axis=1)
+            over = mag > self.anchor_max_force      # 윈치 장력 상한: 초과분은 윈치가 풀리며 흡수
+            if np.any(over):
+                Fa[over] *= (self.anchor_max_force[over] / mag[over])[:, None]
+            for a in range(3):
+                F[:, a] += np.bincount(self.anchor_nodes, weights=Fa[:, a], minlength=self.n)
+            Fa_react = (-Fa).tolist(); ap_l = ap.tolist()
+            for i, a in enumerate(self.anchors):
+                p.applyExternalForce(a.body, -1, Fa_react[i], ap_l[i], p.WORLD_FRAME)
+        # tolist 를 질점마다 부르면 호출 오버헤드가 커서 한 번에 변환한다 (np.any 검사도 제거).
+        F_l = F.tolist(); pos_l = pos.tolist()
         for i, b in enumerate(self.bodies):
-            if np.any(F[i]):
-                p.applyExternalForce(b, -1, F[i].tolist(), pos[i].tolist(), p.WORLD_FRAME)
+            p.applyExternalForce(b, -1, F_l[i], pos_l[i], p.WORLD_FRAME)
         return pos
+
+    def _refresh_anchor_arrays(self):
+        """앵커 파라미터를 벡터 연산용 배열로 캐싱. 앵커를 추가하거나 rest_length 를 바꾼 뒤 호출한다."""
+        self.anchor_nodes = np.array([a.node_idx for a in self.anchors], dtype=int)
+        self.anchor_L0 = np.array([a.rest_length for a in self.anchors], dtype=float)
+        self.anchor_k = np.array([a.k for a in self.anchors], dtype=float)
+        self.anchor_c = np.array([a.c for a in self.anchors], dtype=float)
+        self.anchor_max_force = np.array([a.max_force for a in self.anchors], dtype=float)
 
     def contact_count_with(self, body: int) -> int:
         cnt = 0
@@ -1098,11 +1130,19 @@ class NetCapture(CaptureMethod):
         gy, gz = np.meshgrid(g, g, indexing="ij")
         local = np.stack([np.zeros(n * n), gy.ravel(), gz.ravel()], axis=1)
         idx = lambda i, j: i * n + j
-        masses = np.full(n * n, self.ncfg["node_mass"])
+        # 질량: 면밀도 x 면적 / 질점수. 모서리 4점은 전개용 추라 더 무겁다.
+        node_mass = self.ncfg["areal_density"] * size * size / (n * n)
+        corner_mass = node_mass * self.ncfg["corner_mass_multiple"]
+        masses = np.full(n * n, node_mass)
         corners = [idx(0, 0), idx(0, n - 1), idx(n - 1, 0), idx(n - 1, n - 1)]
-        masses[corners] = self.ncfg["corner_mass"]
+        masses[corners] = corner_mass
         radii = np.full(n * n, spacing * self.ncfg["node_radius_ratio"])
-        k, c = self.ncfg["spring_k"], self.ncfg["spring_c"]
+        # 스프링 계수를 안정조건에서 유도 (가장 가벼운 질점 기준)
+        dt = world.dt
+        k = self.ncfg["spring_k_factor"] * node_mass / (dt * dt)
+        c = self.ncfg["spring_c_factor"] * node_mass / dt
+        self.node_mass, self.corner_mass = node_mass, corner_mass
+        self.net_total_mass = float(masses.sum())
         springs = []
         perim = []
         for i in range(n):
@@ -1144,10 +1184,12 @@ class NetCapture(CaptureMethod):
         # 모서리 4점 ↔ 서비서 발사구 테더 (인장 전용)
         d0 = self.cfg["standoff"]["net"] + target.bounding_radius
         L_tether = self.ncfg["tether_length_factor"] * (d0 + target.bounding_radius)
+        tether_k = self.ncfg["tether_k_factor"] * corner_mass / (dt * dt)
+        tether_c = self.ncfg["tether_c_factor"] * corner_mass / dt
         for ci in corners:
             self.net.anchors.append(Anchor(ci, servicer.body, servicer.attach_local.copy(), L_tether,
-                                           self.ncfg["tether_k"], self.ncfg["tether_c"],
-                                           self.ncfg["winch_max_tension"]))
+                                           tether_k, tether_c, self.ncfg["winch_max_tension"]))
+        self.net._refresh_anchor_arrays()
         self.tether_length = L_tether
         self.winch = TetherWinch(self.ncfg, L_tether)
         self.size = size
@@ -1168,6 +1210,7 @@ class NetCapture(CaptureMethod):
         self.tether_length = self.winch.update(self.world.t, self.bond_established_time)
         for a in self.net.anchors:
             a.rest_length = self.tether_length
+        self.net.anchor_L0[:] = self.tether_length
         pos = self.net.apply_forces()
         self.net.draw(pos)
 
@@ -1220,7 +1263,8 @@ class NetCapture(CaptureMethod):
 
     def extra_metrics(self):
         return {"contact_nodes": self.contact_nodes,
-                "closing_started": self.closing_started}
+                "closing_started": self.closing_started,
+                "net_total_mass_kg": getattr(self, "net_total_mass", None)}
 
 
 # -----------------------------------------------------------------------------
@@ -1279,6 +1323,7 @@ class HarpoonCapture(CaptureMethod):
                                           h["tether_k"], h["tether_c"], h["winch_max_tension"]))
         self.tether.anchors.append(Anchor(nn - 1, self.harpoon, np.array([0, 0, -h["length"] / 2]), seg,
                                           h["tether_k"], h["tether_c"], h["winch_max_tension"]))
+        self.tether._refresh_anchor_arrays()
         self.seg = seg
         self.tether.tension_cap = h["winch_max_tension"]
         self.winch = TetherWinch(h, self.tether_length)
@@ -1299,6 +1344,7 @@ class HarpoonCapture(CaptureMethod):
                 self.tether.L0[:] = self.tether.L0_initial * scale
                 for a in self.tether.anchors:
                     a.rest_length = self.seg * scale
+                self.tether.anchor_L0[:] = self.seg * scale
         pos = self.tether.apply_forces()
         self.tether.draw(pos)
 
