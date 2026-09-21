@@ -52,7 +52,10 @@ EXPERIMENT: Dict = {
     "repeats": 30,                 # 조합당 반복 횟수
     "seed_base": 1000,             # 반복 i 의 시드 = seed_base + i (모든 조합 공통 → paired 비교)
     "spin_mode": "principal",      # "principal" 또는 "precession"
-    "max_time": 60.0,              # 시행당 최대 시뮬레이션 시간 [s]
+    # 시행당 최대 시뮬레이션 시간 [s]. None 이면 capture_sim.CONFIG["sim"]["max_time"] 을 그대로 쓴다.
+    # 여기에 숫자를 적으면 capture_sim 의 값을 조용히 덮어써서, 시간 창을 늘린 사실이 실험에 반영되지 않는다.
+    # 실제로 이 값이 60 으로 남아 있어 테더 방식(감속에 50~130 s 필요)이 전부 무효가 될 뻔했다.
+    "max_time": None,
     "ci_level": 0.95,              # 성공률 신뢰구간 수준 (Wilson score interval)
     # ---- 실제 임무 불확실성 (시드로 섭동). capture_sim.CONFIG["monte_carlo"] 를 덮어씀
     "monte_carlo": {
@@ -87,7 +90,8 @@ def _apply_overrides(exp: Dict):
     import capture_sim as cs
     cs.CONFIG["monte_carlo"].update(exp["monte_carlo"])
     cs.CONFIG["target_dynamics"].update(exp["target_dynamics"])
-    cs.CONFIG["sim"]["max_time"] = exp["max_time"]
+    if exp.get("max_time"):
+        cs.CONFIG["sim"]["max_time"] = exp["max_time"]
     cs.CONFIG["sim"]["record_history"] = False
 
 
