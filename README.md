@@ -112,7 +112,9 @@ mN·m 수준으로 작지만 실제 궤도 환경을 재현한다. 회전좌표�
 
 **녹화**: `--record-frames DIR` 로 PNG 프레임(기본 1280×720, 8스텝마다)을 저장한다. GUI 모드에서는 지구·조명이 포함되고,
 헤드리스에서는 PyBullet 내장 소프트웨어 렌더러의 한계로 지구 배경 없이 포획 장면만 검은 배경에 기록된다.
-`--record-video FILE.mp4` 는 GUI 모드에서 ffmpeg 이 PATH 에 있을 때 동작한다.
+`--record-video FILE.mp4` 는 GUI 모드이면서 ffmpeg 이 PATH 에 있을 때만 동작한다.
+**이 PC 에는 ffmpeg 이 없다.** 조건이 맞지 않으면 경고를 출력하고 녹화를 건너뛰므로 빈 파일이 남지 않는다.
+영상이 필요하면 ffmpeg 을 설치하거나, `--record-frames` 로 PNG 를 뽑아 편집 도구에서 합치면 된다.
 
 ```powershell
 python capture_sim.py --method net --target large --spin 20 --gui --record-frames frames_net

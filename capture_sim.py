@@ -2152,8 +2152,18 @@ class CaptureSimulation:
             if self.viewer_html or self.trajectory_json:
                 tj = TrajectoryRecorder(world, target, servicer, method, cfg["scene"]["viewer_fps"])
             log_id = None
-            if self.record_video and self.gui:
-                log_id = p.startStateLogging(p.STATE_LOGGING_VIDEO_MP4, self.record_video)  # ffmpeg 필요
+            if self.record_video:
+                # PyBullet 의 mp4 녹화는 GUI 연결과 PATH 의 ffmpeg 가 모두 필요하며,
+                # 둘 중 하나라도 없으면 아무 말 없이 빈 파일만 남는다. 미리 확인해 알려준다.
+                import shutil
+                if not self.gui:
+                    print("[warn] --record-video 는 --gui 와 함께 써야 한다. 헤드리스라면 --record-frames 를 사용할 것.",
+                          file=sys.stderr)
+                elif shutil.which("ffmpeg") is None:
+                    print("[warn] PATH 에서 ffmpeg 를 찾지 못해 mp4 녹화를 건너뛴다. "
+                          "PNG 프레임은 --record-frames, 대화형 재생은 --viewer 를 사용할 것.", file=sys.stderr)
+                else:
+                    log_id = p.startStateLogging(p.STATE_LOGGING_VIDEO_MP4, self.record_video)
             try:
                 result = self._loop(world, method, target, servicer, orbit, scenery, recorder, tj)
             finally:
