@@ -162,17 +162,21 @@ def summarize(rows: List[Dict]) -> List[Dict]:
         ct = [_f(r["capture_time"]) for r, ok in zip(g, succ) if ok]
         out.append({"param": pname, "level": level, "method": method, "value": g[0]["value"],
                     "n": n, "successes": k, "success_rate": k / n, "ci_low": lo, "ci_high": hi,
+                    # 이진 성공률은 반복 수가 적으면 신뢰구간이 매우 넓다.
+                    # 잔류 상대 각속도는 연속값이라 같은 반복 수에서 훨씬 작은 분산으로 영향을 드러낸다.
+                    "final_rel_omega_median_deg_s": float(np.nanmedian([_f(r["final_rel_omega_deg_s"]) for r in g])),
                     "capture_time_mean_s": float(np.nanmean(ct)) if ct else float("nan"),
                     "impulse_mean_Ns": float(np.nanmean([_f(r["impulse"]) for r in g])),
                     "attitude_error_mean_deg": float(np.nanmean([_f(r["servicer_attitude_error"]) for r in g]))})
     return out
 
 
-def plot_tornado(summary: List[Dict], path: str):
-    """기준 대비 성공률 변화 폭을 파라미터별 가로 막대로. 방식별 서브플롯."""
+def plot_tornado(summary: List[Dict], path: str, field: str = "success_rate",
+                 label: str = "기준 대비 성공률 변화 [%p]", scale: float = 100.0, unit_fmt: str = "{:.0f}%"):
+    """기준 대비 지표 변화 폭을 파라미터별 가로 막대로. 방식별 서브플롯."""
     plt = _setup_matplotlib()
     methods = sorted({r["method"] for r in summary})
-    base = {r["method"]: r["success_rate"] for r in summary if r["param"] == "(기준)"}
+    base = {r["method"]: r[field] for r in summary if r["param"] == "(기준)"}
     fig, axes = plt.subplots(1, len(methods), figsize=(4.9 * len(methods) + 1, 6.6), squeeze=False,
                              constrained_layout=True)
     for ax, m in zip(axes[0], methods):
@@ -181,11 +185,11 @@ def plot_tornado(summary: List[Dict], path: str):
         for r in summary:
             if r["method"] != m or r["param"] == "(기준)":
                 continue
-            items.setdefault(r["param"], {})[r["level"]] = r["success_rate"]
+            items.setdefault(r["param"], {})[r["level"]] = r[field]
         rows = []
         for pname, lv in items.items():
-            lo = 100 * (lv.get("low", b) - b)
-            hi = 100 * (lv.get("high", b) - b)
+            lo = scale * (lv.get("low", b) - b)
+            hi = scale * (lv.get("high", b) - b)
             rows.append((pname, lo, hi, max(abs(lo), abs(hi))))
         rows.sort(key=lambda x: x[3])
         y = np.arange(len(rows))
@@ -195,8 +199,9 @@ def plot_tornado(summary: List[Dict], path: str):
             ax.barh(i, hi, color=c, alpha=0.95, height=0.6, edgecolor="none")
         ax.axvline(0, color="#52514e", linewidth=1)
         ax.set_yticks(y); ax.set_yticklabels([r[0] for r in rows], fontsize=9)
-        ax.set_xlabel("기준 대비 성공률 변화 [%p]")
-        ax.set_title(f"{METHOD_LABELS.get(m, m)}  (기준 {100*b:.0f}%)", loc="left", fontsize=11)
+        ax.set_xlabel(label)
+        ax.set_title(f"{METHOD_LABELS.get(m, m)}  (기준 {unit_fmt.format(scale * b / 100 if scale == 100 else b)})",
+                     loc="left", fontsize=11)
         ax.grid(axis="x")
         lim = max(5, max((r[3] for r in rows), default=5) * 1.15)
         ax.set_xlim(-lim, lim)
@@ -216,6 +221,10 @@ def write_outputs(rows: List[Dict], out_dir: str):
     with open(sp, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(summary[0].keys())); w.writeheader(); w.writerows(summary)
     plot_tornado(summary, os.path.join(out_dir, "sensitivity_tornado.png"))
+    plot_tornado(summary, os.path.join(out_dir, "sensitivity_tornado_rel_omega.png"),
+                 field="final_rel_omega_median_deg_s",
+                 label="기준 대비 잔류 상대 각속도 변화 [deg/s] (음수 = 감속이 더 잘 됨)",
+                 scale=1.0, unit_fmt="{:.2f} deg/s")
     print(f"summary -> {sp}")
     # 콘솔 표: 영향 큰 순
     base = {r["method"]: r["success_rate"] for r in summary if r["param"] == "(기준)"}
