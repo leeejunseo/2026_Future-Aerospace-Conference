@@ -152,6 +152,11 @@ def summarize(rows: List[Dict], level: float) -> List[Dict]:
             "success_rate": k / n, "ci_low": lo, "ci_high": hi,
             "capture_time_mean_s": float(np.nanmean(ct)) if ct else float("nan"),
             "capture_time_std_s": float(np.nanstd(ct)) if ct else float("nan"),
+            "capture_time_median_s": float(np.nanmedian(ct)) if ct else float("nan"),
+            # 이진 성공률만 보면 "거의 성공"과 "전혀 안 됨"이 구분되지 않는다.
+            # 최종 상대 각속도(중앙값)를 함께 보고해 감속이 어디까지 진행됐는지 남긴다.
+            "final_rel_omega_median_deg_s": float(np.nanmedian([_to_float(r["final_rel_omega_deg_s"]) for r in g])),
+            "bond_intact_rate": float(np.mean([str(r["bond_intact_final"]).lower() == "true" for r in g])),
             "impulse_mean_Ns": float(np.nanmean(imp)), "impulse_max_Ns": float(np.nanmax(imp)),
             "servicer_attitude_error_mean_deg": float(np.nanmean(att)),
         })
@@ -177,6 +182,71 @@ def _setup_matplotlib():
                          "axes.spines.top": False, "axes.spines.right": False,
                          "grid.color": "#e6e5e0", "grid.linewidth": 0.8, "font.size": 10})
     return plt
+
+
+def plot_metric_heatmaps(summary: List[Dict], exp: Dict, path: str, field: str, title: str,
+                         unit: str, vmin=None, vmax=None, log: bool = False, reverse: bool = False,
+                         fmt: str = "{:.0f}"):
+    """임의 지표를 방식별 회전속도 x 질량 히트맵으로. 성공률 히트맵과 같은 배치를 쓴다."""
+    plt = _setup_matplotlib()
+    from matplotlib.colors import LinearSegmentedColormap, LogNorm, Normalize
+    ramp = SEQUENTIAL_BLUE[::-1] if reverse else SEQUENTIAL_BLUE
+    cmap = LinearSegmentedColormap.from_list("seq", ramp)
+    cmap = cmap.with_extremes(bad="#eceae4")
+    spins = sorted({r["spin_deg_s"] for r in summary})
+    targets = [t for t in exp["targets"] if any(r["target"] == t for r in summary)]
+    methods = [m for m in exp["methods"] if any(r["method"] == m for r in summary)]
+    table = {(r["method"], r["target"], r["spin_deg_s"]): r for r in summary}
+    mats = {}
+    for m in methods:
+        M = np.full((len(targets), len(spins)), np.nan)
+        for i, t in enumerate(targets):
+            for j, s in enumerate(spins):
+                r = table.get((m, t, s))
+                if r is not None:
+                    M[i, j] = r.get(field, np.nan)
+        mats[m] = M
+    allv = np.concatenate([M[np.isfinite(M)] for M in mats.values()]) if mats else np.array([0.0])
+    if allv.size == 0:
+        allv = np.array([0.0, 1.0])
+    lo = vmin if vmin is not None else float(np.nanmin(allv))
+    hi = vmax if vmax is not None else float(np.nanmax(allv))
+    if log:
+        lo = max(lo, 1e-3)
+        norm = LogNorm(vmin=lo, vmax=max(hi, lo * 10))
+    else:
+        norm = Normalize(vmin=lo, vmax=hi if hi > lo else lo + 1)
+    fig, axes = plt.subplots(len(methods), 1, figsize=(max(8, 0.55 * len(spins) + 2), 2.1 * len(methods) + 1.2),
+                             squeeze=False, constrained_layout=True)
+    im = None
+    for ax, m in zip(axes[:, 0], methods):
+        M = mats[m]
+        im = ax.imshow(M, cmap=cmap, norm=norm, aspect="auto")
+        ax.set_xticks(range(len(spins))); ax.set_xticklabels([f"{s:g}" for s in spins])
+        ax.set_yticks(range(len(targets))); ax.set_yticklabels([TARGET_LABELS[t] for t in targets])
+        ax.set_title(f"{METHOD_LABELS[m]} · {title}", loc="left", fontsize=11, color="#0b0b0b")
+        ax.set_xlabel("회전 속도 [deg/s]")
+        ax.tick_params(length=0)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        ax.set_xticks(np.arange(-0.5, len(spins), 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, len(targets), 1), minor=True)
+        ax.grid(which="minor", color="#fcfcfb", linewidth=2)
+        ax.tick_params(which="minor", length=0)
+        for i in range(len(targets)):
+            for j in range(len(spins)):
+                v = M[i, j]
+                if np.isfinite(v):
+                    frac = norm(v)
+                    ax.text(j, i, fmt.format(v), ha="center", va="center", fontsize=8,
+                            color="#ffffff" if frac > 0.55 else "#0b0b0b")
+    cbar = fig.colorbar(im, ax=axes[:, 0].tolist(), shrink=0.8, pad=0.02)
+    cbar.set_label(unit)
+    cbar.outline.set_visible(False)
+    n = summary[0]["n"] if summary else 0
+    fig.suptitle(f"{title} (조합당 n={n}, 회색 = 해당 없음)", x=0.01, ha="left", fontsize=12)
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
 
 
 def plot_heatmaps(summary: List[Dict], exp: Dict, path: str):
@@ -293,6 +363,16 @@ def write_summary(rows: List[Dict], exp: Dict, out_dir: str):
         wr.writeheader(); wr.writerows(summary)
     plot_heatmaps(summary, exp, os.path.join(out_dir, "heatmap_success.png"))
     plot_curves(summary, exp, os.path.join(out_dir, "curves_success.png"))
+    # 이진 성공률만으로는 "거의 다 감속했다"와 "전혀 안 됐다"가 구분되지 않는다.
+    plot_metric_heatmaps(summary, exp, os.path.join(out_dir, "heatmap_final_rel_omega.png"),
+                         "final_rel_omega_median_deg_s", "잔류 상대 각속도 (중앙값)", "deg/s",
+                         log=True, reverse=True, fmt="{:.1f}")
+    plot_metric_heatmaps(summary, exp, os.path.join(out_dir, "heatmap_capture_time.png"),
+                         "capture_time_median_s", "감속 소요 시간 (성공 시행 중앙값)", "s",
+                         reverse=True, fmt="{:.0f}")
+    plot_metric_heatmaps(summary, exp, os.path.join(out_dir, "heatmap_impulse.png"),
+                         "impulse_mean_Ns", "최대 충격량 평균 (2차 파편 위험)", "N·s",
+                         log=True, reverse=True, fmt="{:.0f}")
     print(f"summary -> {spath}")
     print(f"plots   -> {os.path.join(out_dir, 'heatmap_success.png')}, {os.path.join(out_dir, 'curves_success.png')}")
     # 콘솔 요약표
