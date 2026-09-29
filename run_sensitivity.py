@@ -63,7 +63,8 @@ PARAMS: List[Dict] = [
     {"path": ("net", "winch_reel_rate"), "name": "그물 되감기 속도", "mult": (0.5, 2.0), "methods": ["net"]},
     {"path": ("net", "tether_c_factor"), "name": "그물 테더 감쇠", "abs": (0.10, 0.45), "methods": ["net"]},
     # ---- 작살
-    {"path": ("harpoon", "speed"), "name": "작살 발사 속도", "mult": (0.6, 1.5), "methods": ["harpoon"]},
+    # 상한 20 m/s 는 RemoveDEBRIS 궤도상 실증값이다 (Aglietti 외, 2019)
+    {"path": ("harpoon", "speed"), "name": "작살 발사 속도", "abs": (8.0, 20.0), "methods": ["harpoon"]},
     {"path": ("harpoon", "min_penetration_speed"), "name": "관통 임계 속도", "mult": (0.5, 2.0), "methods": ["harpoon"]},
     {"path": ("harpoon", "max_incidence_deg"), "name": "관통 허용 입사각", "abs": (30.0, 60.0), "methods": ["harpoon"]},
     {"path": ("harpoon", "anchor_break_force"), "name": "고정부 파단력", "mult": (0.4, 2.5), "methods": ["harpoon"]},

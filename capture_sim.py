@@ -247,7 +247,10 @@ CONFIG: Dict = {
         "mass": 2.0,                  # 발사체 질량 [kg]  # TODO: 출처 확인 필요
         "radius": 0.03,               # 발사체 반경 [m]
         "length": 0.4,                # 발사체 길이 [m]  # TODO: 출처 확인 필요
-        "speed": 12.0,                # 발사 속도 [m/s]  # TODO: 출처 확인 필요
+        # 발사 속도 [m/s]. RemoveDEBRIS 는 2019년 궤도상 실증에서 20 m/s 로 발사했다
+        # (Aglietti 외, Acta Astronautica 168, 2019, pp.310-322). 여기서는 보수적으로 12 m/s 를 쓰고
+        # 민감도 분석에서 실증값 20 m/s 를 포함하는 범위로 확인한다.
+        "speed": 12.0,
         "aim_error_deg": 0.5,         # 조준 오차 표준편차 [deg] (시드 랜덤)  # TODO: 출처 확인 필요
         "min_penetration_speed": 4.0,  # 관통에 필요한 최소 법선 충돌 속도 [m/s]  # TODO: 출처 확인 필요
         "max_incidence_deg": 45.0,    # 관통 허용 최대 입사각 (표면 법선 기준)  # TODO: 출처 확인 필요
