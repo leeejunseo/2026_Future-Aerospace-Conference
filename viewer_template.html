@@ -356,8 +356,11 @@
   // 그물 / 테더 (질점 + 스프링 선)
   function makeNodeSet(n, radius, color, si, sj, anchorsCount) {
     // 질점은 실제 충돌 반경 그대로 그리되 반투명으로 — 대상이 가려지지 않으면서 모델의 실제 크기를 속이지 않는다
+    // ?nodes=0.3 처럼 주면 그 배율로 줄여 그린다 (논문 그림에서 그물 선이 보이게 할 때만 쓴다)
+    const nodeScale = parseFloat(new URLSearchParams(location.search).get("nodes"));
+    const r = radius * (nodeScale >= 0 ? nodeScale : 1);
     const inst = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(radius, 14, 10),
+      new THREE.SphereGeometry(Math.max(r, 1e-4), 14, 10),
       new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.05, emissive: color, emissiveIntensity: 0.25,
                                        transparent: true, opacity: 0.42, depthWrite: false }), n);
     scene.add(inst);
