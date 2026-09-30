@@ -5,6 +5,7 @@ sensitivity/
 comparison/
 report/
 verification/
+results_axis/
 __pycache__/
 *.pyc
 # site/ 는 제외하지 않는다.

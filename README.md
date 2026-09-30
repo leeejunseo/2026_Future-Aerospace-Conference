@@ -37,11 +37,13 @@ python capture_sim.py --method arm --target medium --spin 10
 | 파일 | 역할 |
 |---|---|
 | [capture_sim.py](capture_sim.py) | 시뮬레이터 본체. 모든 물리 상수와 가정값이 상단 `CONFIG` 에 모여 있다 |
-| [run_all.sh](run_all.sh) | 격자 실험 → 수치 검증 → 민감도 분석을 순차 실행하는 구동 스크립트 |
+| [run_all.sh](run_all.sh) | 격자 실험 → 방식 비교 → 수치 검증 → 민감도 분석 → 회전축 추가 실험을 순차 실행하는 구동 스크립트 |
+| [run_detached.ps1](run_detached.ps1) | `run_all.sh` 를 터미널과 분리된 프로세스로 실행 (창을 닫아도 계속 돈다) |
 | [run_grid_experiment.py](run_grid_experiment.py) | 본 실험. 회전 속도 × 질량 × 방식 격자를 몬테카를로로 반복 |
 | [analyze_compare.py](analyze_compare.py) | 방식 간 짝지은 통계 비교 (McNemar · 부트스트랩 · Wilcoxon) |
 | [run_verification.py](run_verification.py) | 수치 검증. 논문 부록용 |
 | [run_sensitivity.py](run_sensitivity.py) | 가정값 민감도 분석 |
+| [analyze_axis.py](analyze_axis.py) | 회전축 추가 실험(중형 대상 x·y 축) 분석 |
 | [make_report.py](make_report.py) | 산출물에서 논문용 표·수치를 뽑아 정리 |
 | [build_site.py](build_site.py) | 리플레이를 웹 배포용 정적 사이트로 묶음 |
 | [viewer_template.html](viewer_template.html) | 웹 3D 리플레이 뷰어의 UI 틀 |
@@ -49,7 +51,7 @@ python capture_sim.py --method arm --target medium --spin 10
 | `demo/` | 방식별 샘플 리플레이. 브라우저로 바로 열면 된다 |
 | `manuscript/` | 학술대회 원고(제출용·전체판), 그림, 확인 완료된 참고문헌 |
 
-생성물(`results/` `comparison/` `verification/` `sensitivity/` `report/` `logs/`)은 git 추적에서 제외한다.
+생성물(`results/` `comparison/` `verification/` `sensitivity/` `results_axis/` `report/` `logs/`)은 git 추적에서 제외한다.
 스크립트로 언제든 재생성된다.
 
 ---
@@ -60,10 +62,13 @@ python capture_sim.py --method arm --target medium --spin 10
 
 ```bash
 bash run_all.sh 11          # 워커 11개로 전체
-bash run_all.sh 11 grid     # 단계 선택: grid | compare | verify | sens
+bash run_all.sh 11 grid     # 단계 선택: grid | compare | verify | sens | axis
+
+# 터미널을 닫아도 계속 돌게 하려면 (Windows)
+powershell -ExecutionPolicy Bypass -File run_detached.ps1 -W 10 -Only axis
 ```
 
-세 단계 모두 `--resume` 을 지원하므로 중단 후 같은 명령을 다시 실행하면 이어서 진행한다.
+계산 단계는 모두 `--resume` 을 지원하므로 중단 후 같은 명령을 다시 실행하면 이어서 진행한다.
 한 단계가 실패하거나 중단되면 다음 단계로 넘어가지 않고 전체가 멈춘다.
 
 12스레드 노트북 기준 예상 소요다. 그물 시행 하나가 감속까지 100 초 규모를 돌기 때문에 전체가 길다.
@@ -98,8 +103,8 @@ python make_report.py --only assumptions
 
 | 파일 | 용도 | 분량 |
 |---|---|---|
-| [manuscript/원고_제출용.md](manuscript/원고_제출용.md) | 학술대회 제출용. 템플릿 한도(A4 8~12매)에 맞춤 | 약 9쪽, 표 5·그림 4 |
-| [manuscript/원고_초안.md](manuscript/원고_초안.md) | 모든 분석을 담은 전체판. 발표 준비·질의응답 자료 | 약 17쪽, 표 7·그림 6 |
+| [manuscript/원고_제출용.md](manuscript/원고_제출용.md) | 학술대회 제출용. 템플릿 한도(A4 8~12매)에 맞춤 | 약 9~10쪽, 표 6·그림 4 |
+| [manuscript/원고_초안.md](manuscript/원고_초안.md) | 모든 분석을 담은 전체판. 발표 준비·질의응답 자료 | 약 18~19쪽, 표 8·그림 7 |
 
 두 원고 모두 한글 템플릿의 장·절 구조와 서식 지시를 그대로 따른다. 한글에서 템플릿을 열고 옮겨 붙인 뒤
 대괄호 안의 서식을 지정하면 된다. 그림은 `manuscript/figures/` 에 번호순으로 준비되어 있다.
@@ -404,6 +409,40 @@ python run_sensitivity.py --plots-only
 
 ---
 
+## 회전축 추가 실험 (`analyze_axis.py`)
+
+민감도 분석에서 회전축이 중형 대상의 결과를 바꾸는 경향이 보여, 중형 대상을 나머지 두 주축으로 돌린 격자를 추가로 돌렸다.
+서비스 위성은 x 방향에서 접근하고, 본 실험은 z 축으로 돌린다. 중형 대상의 주관성모멘트는 x 219.7, y 79.2, z 223.8 kg·m² 이다.
+
+| 회전축 | 의미 |
+|---|---|
+| z (본 실험) | 접근축에 수직, 태양전지판 면에 수직, 최대 관성축 |
+| x | 접근축과 같은 방향, 중간 관성축 (순수 회전이 불안정해 점차 뒤집힌다) |
+| y | 태양전지판 방향, 최소 관성축 |
+
+```bash
+bash run_all.sh 10 axis     # x·y 축을 워커를 반씩 나눠 동시에 돌린 뒤 analyze_axis.py 실행
+python analyze_axis.py      # 분석만 다시
+```
+
+회전 대상 2~30 deg/s, 축마다 1,350 회, 모두 2,700 회다. 시드가 본 실험과 같아서 회전축만 바꾼 짝지은 비교가 된다.
+`run_grid_experiment.py --spin-axis x` 처럼 격자 스크립트에 회전축을 줄 수 있다.
+출력은 `results_axis/` 에 쌓인다(`axis_report.md`, `axis_summary.csv`, `axis_tests.csv`, 그림 2 장).
+
+결과 (회전 대상 성공률, 축·방식당 450 회):
+
+| 회전축 | 로봇팔 | 그물 | 작살 | 1·2 위 차이 |
+|---|---|---|---|---|
+| z (본 실험) | 12.4 % | **71.8 %** | 14.0 % | +57.8 %p (Holm p < 10⁻⁴) |
+| x | 39.3 % | **49.8 %** | 5.8 % | +10.4 %p (Holm p = 0.004) |
+| y | 32.9 % | **39.6 %** | 7.1 % | +6.7 %p (Holm p = 0.099, 유의하지 않음) |
+
+그물은 세 축 모두 1 위였지만 뚜렷한 우위는 z 축뿐이다. 회전축을 z 에서 바꾸면 로봇팔은 20~27 %p 오르고
+그물은 22~32 %p 떨어진다. 로봇팔이 z 축에서만 약한 것은 태양전지판이 접근 평면을 쓸고 지나가는 것이 z 축 회전뿐이기
+때문이라는 해석과 맞는다.
+
+---
+
 ## 논문에 반드시 쓸 것
 
 아래는 결과를 크게 좌우하므로 방법론 절에 명시해야 한다. 모두 짧은 시행만으로는 드러나지 않고
@@ -431,13 +470,13 @@ python run_sensitivity.py --plots-only
 
 **5. 기본 회전축은 접근축에 수직인 z 축이다.**
 중형 대상은 태양전지판이 접근 평면을 쓸고 지나가므로 로봇팔에 불리하다.
-회전축을 x 로 두면 파지점이 회전축 위에 온다. 본 격자는 z 축으로 돌리고,
-회전축의 영향은 민감도 분석에서 따로 정량화한다.
+회전축을 x 로 두면 파지점이 회전축 위에 온다. 본 격자는 z 축으로 돌렸다.
 
-민감도 분석에서 회전축의 합산 영향은 하위권이었지만, **대상별로 보면 중형에서 결과가 달라진다.**
-x 축 회전에서는 중형 대상에 대한 그물의 성공이 6 회 중 4 회에서 2 회로 줄어 세 방식이 비슷해졌다.
-합산 지표에서는 영향이 거의 없는 소형·대형에 중형의 변화가 희석되어 보이지 않았다.
-따라서 **"중형은 그물이 유효하다"는 결론은 접근축 수직 회전에서만 확립된 것**으로 적어야 한다.
+민감도 분석에서 회전축의 합산 영향은 하위권이었지만, 중형만 보면 결과가 달라지는 경향이 보여
+중형 대상은 x·y 축 격자 실험을 추가로 돌렸다(위 "회전축 추가 실험" 절).
+**그물은 세 축 모두 1 위였지만 2 위와의 차이는 57.8 %p(z)에서 10.4 %p(x), 6.7 %p(y, 유의하지 않음)로 줄었다.**
+따라서 "중형은 그물"은 "어느 주축에서도 뒤지지 않지만 뚜렷한 우위는 z 축 회전에 한정된다"로 적어야 한다.
+소형·대형은 z 축만 격자로 돌렸으므로 그 결론은 z 축 회전에 대한 것이다.
 
 **6. 작살 고정부 파단 판정이 적분 간격에 의존하는 결함이 있었고, 고쳤다.**
 작살이 박히는 순간 한 스텝 안에 상대 운동을 멈추게 하면 제약력이 운동량/dt 가 되어, 같은 충돌도 dt 를 줄이면
