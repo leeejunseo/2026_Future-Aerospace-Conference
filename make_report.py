@@ -139,26 +139,34 @@ def summarize_results(summary: List[Dict]) -> List[str]:
                          "최대 충격량 [N·s]", "서비서 자세 변화 [deg]"], rows))
     out.append("")
 
-    # --- 표 2: 성공 한계 회전 속도
-    out.append("### 표 2. 성공률이 50 % 아래로 떨어지는 회전 속도\n")
+    # --- 표 2: 성공률 50 % 이상을 유지하는 회전 속도 구간
+    # "처음으로 50 % 아래로 떨어지는 속도" 는 성공률이 회전 속도에 대해 단조 감소할 때만 의미가 있다.
+    # 실제로는 중형 그물처럼 회전이 빠를수록 오르거나, 소형 로봇팔처럼 골짜기가 있는 곡선이 나오므로
+    # 50 % 이상인 구간을 모두 나열한다.
+    out.append("### 표 2. 성공률 50 % 이상을 유지하는 회전 속도 구간\n")
     rows = []
     for m in methods:
         for t in targets:
-            limit = None
-            for s in spins:
-                r = tbl.get((m, t, s))
-                if r is None:
-                    continue
-                if _f(r["success_rate"]) < 0.5:
-                    limit = s
-                    break
+            ok = [s for s in spins if (m, t, s) in tbl and _f(tbl[(m, t, s)]["success_rate"]) >= 0.5]
             best = max((_f(tbl[(m, t, s)]["success_rate"]) for s in spins if (m, t, s) in tbl), default=0.0)
             rows.append([METHOD_LABELS[m], TARGET_LABELS[t].split(" (")[0],
-                         f"{limit:.0f}" if limit is not None else "해당 없음 (전 구간 50 % 이상)",
+                         _ranges(ok, spins) if ok else "없음",
                          f"{100 * best:.0f}%"])
-    out.append(md_table(["포획 방식", "대상", "50 % 미만이 되는 회전 속도 [deg/s]", "최고 성공률"], rows))
+    out.append(md_table(["포획 방식", "대상", "성공률 50 % 이상 구간 [deg/s]", "최고 성공률"], rows))
     out.append("")
     return out
+
+
+def _ranges(values: List[float], grid: List[float]) -> str:
+    """격자 위에서 연속한 값들을 '0~12, 16~30' 처럼 구간으로 묶는다 (한국어 논문의 범위 표기)."""
+    idx = sorted(grid.index(v) for v in values)
+    parts, start = [], idx[0]
+    for a, b in zip(idx, idx[1:] + [None]):
+        if b is None or b != a + 1:
+            lo, hi = grid[start], grid[a]
+            parts.append(f"{lo:.0f}" if lo == hi else f"{lo:.0f}~{hi:.0f}")
+            start = b
+    return ", ".join(parts)
 
 
 def summarize_sensitivity(summary: List[Dict]) -> List[str]:
