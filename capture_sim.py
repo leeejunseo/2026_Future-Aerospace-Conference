@@ -2047,7 +2047,13 @@ class TrajectoryRecorder:
             earth = "data:image/jpeg;base64," + base64.b64encode(open(tex, "rb").read()).decode("ascii")
         payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"),
                              default=TrajectoryRecorder._json_default).replace("</", "<\\/")
-        html = tpl.replace("/*__DATA_JSON__*/null", payload).replace("__EARTH_DATA_URI__", earth)
+        # 템플릿의 데이터 자리. 웹 배포용 빌드(build_site.py)와 같은 템플릿을 쓰므로 둘이 어긋나면 안 된다.
+        # 치환 대상이 없으면 궤적이 빠진 채 "데이터 없음" 화면만 나오므로, 조용히 넘어가지 않고 멈춘다.
+        marker = "/*__DATA_JSON__*/window.__DEBRIS_DATA__ || null"
+        if marker not in tpl:
+            raise RuntimeError("viewer_template.html 에서 데이터 자리를 찾지 못했다. "
+                               "템플릿의 `const DATA = ...` 줄과 이 치환 문자열을 맞출 것.")
+        html = tpl.replace(marker, payload).replace("__EARTH_DATA_URI__", earth)
         # three.js 를 파일에 내장해 오프라인에서도 열리게 한다 (assets/three.min.js 가 있을 때).
         # 없으면 템플릿의 CDN <script> 가 그대로 남아 인터넷 연결이 필요하다.
         three = os.path.join(here, CONFIG["scene"]["three_js"])

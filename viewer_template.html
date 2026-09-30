@@ -106,6 +106,8 @@
     .time { min-width: 0; }
   }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+  /* 논문 그림용: 주소 뒤에 ?clean 을 붙이면 조작 패널을 모두 숨긴다 */
+  .clean .mission, .clean .telemetry, .clean .transport, .clean .toast { display: none !important; }
 </style>
 
 <div id="app">
@@ -629,8 +631,14 @@
     hudAcc += dt; if (hudAcc > 0.05) { hudAcc = 0; updateHUD(); }
     requestAnimationFrame(loop);
   }
-  applyTime(0); updateCamera(); updateHUD();
-  togglePlay(true);
+  // 주소 매개변수: ?clean 은 패널을 숨기고, ?t=초 는 그 시각에서 멈춘다 (논문 그림 캡처용).
+  //   예) runs/net_medium_10degs.html?clean&t=40
+  const QS = new URLSearchParams(location.search);
+  if (QS.has("clean")) app.classList.add("clean");
+  const startT = QS.has("t") ? Math.max(0, Math.min(T_END, parseFloat(QS.get("t")) || 0)) : 0;
+  play.t = startT;
+  applyTime(startT); updateCamera(); updateHUD();
+  togglePlay(!QS.has("t"));
   requestAnimationFrame(loop);
 })();
 </script>

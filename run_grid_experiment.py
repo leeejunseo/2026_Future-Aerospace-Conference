@@ -297,7 +297,8 @@ def plot_heatmaps(summary: List[Dict], exp: Dict, path: str):
     cbar.set_label("성공률 [%]")
     cbar.outline.set_visible(False)
     n = summary[0]["n"] if summary else 0
-    fig.suptitle(f"회전 속도 x 질량 포획 성공률 (조합당 n={n}, 모드={exp['spin_mode']})", x=0.01, ha="left", fontsize=12)
+    mode = "주축 회전" if exp.get("spin_mode") == "principal" else "세차 운동"
+    fig.suptitle(f"회전 속도 × 질량별 포획 성공률 (조합당 n={n}, {mode})", x=0.01, ha="left", fontsize=12)
     fig.savefig(path, dpi=200)
     plt.close(fig)
 
