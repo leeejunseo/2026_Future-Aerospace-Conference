@@ -255,6 +255,11 @@ CONFIG: Dict = {
         "min_penetration_speed": 4.0,  # 관통에 필요한 최소 법선 충돌 속도 [m/s]  # TODO: 출처 확인 필요
         "max_incidence_deg": 45.0,    # 관통 허용 최대 입사각 (표면 법선 기준)  # TODO: 출처 확인 필요
         "anchor_break_force": 3000.0,  # 고정부(미늘) 이탈 한계 힘 [N]  # TODO: 출처 확인 필요
+        # 관통(박힘) 모델. 작살은 관통 깊이에 걸쳐 유한한 힘으로 감속한다.
+        # 감속력 1500 N 이면 2 kg, 법선 속도 6 m/s 작살이 약 2.4 cm 에 걸쳐 멈춘다 (s = m v^2 / 2F).
+        # 이 값이 파단력보다 작아야 박히는 과정 자체에서 뜯기지 않는다.
+        "embed_force": 1500.0,         # 박힘 구간 최대 감속력 [N]  # TODO: 출처 확인 필요
+        "embed_time": 0.05,            # 박힘 구간 길이 [s]. 이 동안은 파단 판정을 하지 않는다  # TODO: 출처 확인 필요
         "tether_length_factor": 1.05,  # 테더 자유 길이 = 초기 이격 거리 x 이 값  # TODO: 출처 확인 필요
         "tether_nodes": 10,           # 테더를 이루는 중간 질점 수 (대상 둘레 감김 표현용)
         # 테더 질점 질량 [kg]. 총 2 kg (~0.18 kg/m) 급 하중 지지 테더를 가정.
@@ -1388,6 +1393,14 @@ class HarpoonCapture(CaptureMethod):
             st = p.getConstraintState(self.anchor_constraint)
             F = float(np.linalg.norm(st[:3]))
             self.max_interaction_force = max(self.max_interaction_force, F)
+            # 박힘(embedding) 구간: 작살이 관통 깊이만큼 감속하는 동안에는 제약력을 embed_force 로 제한하고
+            # 파단 판정을 하지 않는다. 이 구간이 끝나면 강체 결합으로 바꾸고 테더 하중에 대해서만 파단을 본다.
+            if self.world.t - self.state_time < h["embed_time"]:
+                return
+            if not self._embedded:
+                p.changeConstraint(self.anchor_constraint, maxForce=1e6)
+                self._embedded = True
+                return
             if F > h["anchor_break_force"]:
                 p.removeConstraint(self.anchor_constraint)
                 self.anchor_constraint = None
@@ -1402,7 +1415,11 @@ class HarpoonCapture(CaptureMethod):
         child_pos, child_q = p.multiplyTransforms(inv_p, inv_q, hpos, hq)
         self.anchor_constraint = p.createConstraint(self.harpoon, -1, self.target.body, -1, p.JOINT_FIXED,
                                                     [0, 0, 0], [0, 0, 0], child_pos, [0, 0, 0, 1], child_q)
-        p.changeConstraint(self.anchor_constraint, maxForce=1e6)
+        # 한 스텝에 강체로 붙이면 상대 운동량을 dt 안에 멈춰야 해서 제약력이 운동량/dt 가 된다.
+        # 그러면 같은 충돌도 dt 를 절반으로 줄이면 힘이 두 배로 계산되어 파단 판정이 dt 에 따라 뒤집힌다.
+        # 관통을 유한한 감속력으로 모델링해 이 의존성을 없앤다 (로봇팔의 순응 파지와 같은 원리).
+        p.changeConstraint(self.anchor_constraint, maxForce=self.hcfg["embed_force"])
+        self._embedded = False
         p.setCollisionFilterPair(self.harpoon, self.target.body, -1, -1, 0)  # 박힌 뒤 접촉력 제거
         self.state = "anchored"; self.state_time = self.world.t
         self.bond_established_time = self.world.t
