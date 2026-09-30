@@ -298,6 +298,9 @@ def plot_heatmaps(summary: List[Dict], exp: Dict, path: str):
     cbar.outline.set_visible(False)
     n = summary[0]["n"] if summary else 0
     mode = "주축 회전" if exp.get("spin_mode") == "principal" else "세차 운동"
+    axis = exp.get("target_dynamics", {}).get("spin_axis")
+    if axis and axis != "z":
+        mode += f", 회전축 {axis}"
     fig.suptitle(f"회전 속도 × 질량별 포획 성공률 (조합당 n={n}, {mode})", x=0.01, ha="left", fontsize=12)
     fig.savefig(path, dpi=200)
     plt.close(fig)
@@ -346,7 +349,9 @@ def plot_curves(summary: List[Dict], exp: Dict, path: str):
     fig.legend(handles, labels, title=f"음영: Wilson {lvl}% 신뢰구간", frameon=False,
                loc="outside lower center", ncol=len(labels) + 1)
     n = summary[0]["n"] if summary else 0
-    fig.suptitle(f"회전 속도에 따른 포획 성공률 (조합당 n={n})", x=0.01, ha="left", fontsize=12)
+    axis = exp.get("target_dynamics", {}).get("spin_axis")
+    axis_note = f", 회전축 {axis}" if axis and axis != "z" else ""
+    fig.suptitle(f"회전 속도에 따른 포획 성공률 (조합당 n={n}{axis_note})", x=0.01, ha="left", fontsize=12)
     fig.savefig(path, dpi=200)
     plt.close(fig)
 
@@ -401,6 +406,8 @@ def main(argv=None):
     ap.add_argument("--repeats", type=int, default=None)
     ap.add_argument("--seed-base", type=int, default=None)
     ap.add_argument("--spin-mode", choices=["principal", "precession"], default=None)
+    ap.add_argument("--spin-axis", choices=["x", "y", "z", "major", "minor"], default=None,
+                    help="대상 동체 좌표의 주축 회전축 (기본 z: 접근축 x 에 수직). 서비서는 -x 쪽에서 접근한다")
     ap.add_argument("--max-time", type=float, default=None)
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     ap.add_argument("--out", default="results", help="출력 폴더")
@@ -415,6 +422,7 @@ def main(argv=None):
     if args.repeats is not None: exp["repeats"] = args.repeats
     if args.seed_base is not None: exp["seed_base"] = args.seed_base
     if args.spin_mode: exp["spin_mode"] = args.spin_mode
+    if args.spin_axis: exp["target_dynamics"]["spin_axis"] = args.spin_axis
     if args.max_time: exp["max_time"] = args.max_time
 
     os.makedirs(args.out, exist_ok=True)
@@ -443,8 +451,10 @@ def main(argv=None):
                 for s in exp["spins_deg_s"]:
                     if (m, t, float(s), seed) not in done:
                         tasks.append((m, t, float(s), seed, rep))
-    # 오래 걸리는 그물 시행을 먼저 배치해 마지막에 한 워커만 남아 도는 시간을 줄임
-    tasks.sort(key=lambda x: {"net": 0, "arm": 1, "harpoon": 2}[x[0]])
+    # 반복 번호 순으로 돌려, 중간에 멈춰도 모든 조합이 같은 반복 수만큼 채워져 있게 한다.
+    # 같은 반복 안에서는 오래 걸리는 그물 시행을 먼저 배치해 마지막에 한 워커만 남아 도는 시간을 줄인다.
+    # (시행마다 시드가 고정되어 있으므로 실행 순서는 결과에 영향이 없다)
+    tasks.sort(key=lambda x: (x[4], {"net": 0, "arm": 1, "harpoon": 2}[x[0]]))
     total = len(tasks)
     print(f"tasks: {total} (skipped {len(done)} already done), workers: {args.workers}")
     if total == 0:

@@ -6,14 +6,15 @@
 #
 #   powershell -ExecutionPolicy Bypass -File run_detached.ps1        # 11 workers
 #   powershell -ExecutionPolicy Bypass -File run_detached.ps1 -W 6   # 6 workers
+#   powershell -ExecutionPolicy Bypass -File run_detached.ps1 -W 10 -Only axis   # one stage
 #
-# Progress:  Get-Content logs\grid.log -Tail 3
+# Progress:  Get-Content logs\grid.log -Tail 3   (axis stage: logs\axis_x.log, logs\axis_y.log)
 # Stop:      Get-Process python | Stop-Process -Force
 #
 # Note: ASCII only. Windows PowerShell 5.1 reads .ps1 as ANSI unless the file
 # has a UTF-8 BOM, so non-ASCII text here breaks the parser.
 
-param([int]$W = 11)
+param([int]$W = 11, [string]$Only = "all")
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
@@ -29,10 +30,10 @@ if ($existing) {
 }
 
 New-Item -ItemType Directory -Force -Path "$root\logs" | Out-Null
-$p = Start-Process -FilePath $bash -ArgumentList @("run_all.sh", "$W") `
+$p = Start-Process -FilePath $bash -ArgumentList @("run_all.sh", "$W", $Only) `
         -WorkingDirectory $root -WindowStyle Hidden -PassThru
 $p.Id | Out-File -FilePath "$root\logs\run_all.pid" -Encoding ascii
 
-Write-Host "Started. parent PID $($p.Id), workers $W"
+Write-Host "Started. parent PID $($p.Id), workers $W, stage $Only"
 Write-Host "Progress: Get-Content logs\grid.log -Tail 3"
 Write-Host "Stop:     Get-Process python | Stop-Process -Force"
