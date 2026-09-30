@@ -1,0 +1,150 @@
+﻿구분	항목	값	출처 확인 필요	메모
+시뮬레이션	timestep	1.0 / 480.0	아니오	PyBullet 기본(1/240)의 절반. 명시적 스프링 안정조건 k*dt^2/m < 0.25, c*dt/m < 0.5 를 위해 축소
+시뮬레이션	max_time	180.0	예	포획 시도 최대 시간 [s]. 테더 방식(그물·작살)의 감속은 100 s 규모라 60 s 창에서는 방식 비교가 성립하지 않는다.
+시뮬레이션	gravity	(0.0, 0.0, 0.0)	아니오	궤도상 자유낙하 → 상대운동 좌표계에서 중력 0 (연구 정의)
+시뮬레이션	solver_iterations	150	예	제약 솔버 반복 횟수. 강성 제약(파지/작살 고정)의 드리프트 억제용  #
+시뮬레이션	gui_realtime	True	아니오	GUI 모드에서 실시간 속도로 재생
+시뮬레이션	debug_lines	True	아니오	GUI 모드에서 스프링을 선으로 표시
+시뮬레이션	debug_line_interval	8	아니오	몇 스텝마다 디버그 선을 갱신할지 (렌더 비용 절감)
+시뮬레이션	record_history	False	아니오	True 면 결과 dict 에 시계열(history) 포함
+시뮬레이션	escape_distance_factor	4.0	예	대상이 초기 이격거리의 이 배수 이상 멀어지면 조기 종료(실패)  #
+성공 판정	rel_omega_threshold_deg_s	1.0	아니오	대상-서비서 상대 각속도 임계값 (연구 정의)
+성공 판정	hold_time	3.0	예	임계값 이하 상태가 이 시간 이상 유지되어야 성공 (순간 통과 배제)  #
+대상 파편	mass	10.0	아니오	연구 정의 (소형)
+대상 파편	shape	"""box"""	아니오	
+대상 파편	half_extents	(0.15, 0.15, 0.15)	예	한 변 0.3 m 정육면체 (큐브샛 급 크기 가정)  #
+대상 파편	grasp_point	(-0.15, 0.0, 0.0)	아니오	로봇팔 파지 / 작살 조준점 (동체 좌표, 서비서를 향한 -x 면 중심)
+대상 파편	grasp_normal	(-1.0, 0.0, 0.0)	아니오	파지점 외향 법선 (동체 좌표)
+대상 파편	mass	500.0	아니오	연구 정의 (중형)
+대상 파편	shape	"""bus_with_panels"""	아니오	
+대상 파편	bus_half_extents	(0.5, 0.5, 0.5)	예	본체 1 m 정육면체  #
+대상 파편	panel_half_extents	(0.5, 1.0, 0.01)	예	태양전지판 1 m x 2 m x 0.02 m, 본체 ±y 방향  #
+대상 파편	panel_offset_y	1.6	아니오	본체 중심에서 패널 중심까지 거리 (0.5 + 0.1 간격 + 1.0)
+대상 파편	panel_mass	25.0	예	패널 1장 질량 (총 질량의 5 %)  #
+대상 파편	grasp_point	(-0.5, 0.0, 0.0)	아니오	
+대상 파편	grasp_normal	(-1.0, 0.0, 0.0)	아니오	
+대상 파편	mass	2000.0	아니오	연구 정의 (대형)
+대상 파편	shape	"""cylinder"""	아니오	
+대상 파편	radius	1.0	예	상단 로켓 단(段) 급 원통 가정  #
+대상 파편	length	3.0	예	
+대상 파편	grasp_point	(-1.0, 0.0, 0.0)	아니오	원통 옆면(-x) 점
+대상 파편	grasp_normal	(-1.0, 0.0, 0.0)	아니오	
+대상 동역학 공통	restitution	0.2	예	금속 구조물 충돌 반발계수 가정  #
+대상 동역학 공통	lateral_friction	0.5	예	표면 마찰계수 가정  #
+대상 동역학 공통	linear_damping	0.0	아니오	우주 공간: 공기 저항 없음 → 0 (PyBullet 기본값 0.04 를 반드시 덮어씀)
+대상 동역학 공통	angular_damping	0.0	아니오	동일. 0 이 아니면 각운동량이 보존되지 않아 세차 운동이 왜곡됨
+대상 동역학 공통	initial_attitude_jitter_deg	5.0	예	시드 기반 초기 자세 무작위 섭동 (표준편차)  #
+대상 동역학 공통	spin_axis	"""z"""	아니오	"주축 회전축: ""x""/""y""/""z"" 또는 ""major""(최대 관성축)/""minor""(최소 관성축)"
+대상 동역학 공통	nutation_angle_deg	20.0	예	세차 모드에서 각속도 벡터와 회전축 사이 각도 (장동각)  #
+서비스 위성	mass	1000.0	예	중형 서비스 위성 가정  #
+서비스 위성	half_extents	(0.75, 0.75, 0.75)	예	1.5 m 정육면체 본체  #
+서비스 위성	attach_point	(0.75, 0.0, 0.0)	아니오	팔 장착부 / 테더·그물 발사구 위치 (동체 좌표, +x 면 중심)
+서비스 위성	restitution	0.2	예	
+서비스 위성	lateral_friction	0.5	예	
+서비스 위성	attitude_hold	False	예	True 면 반작용휠 PD 자세 유지. 접촉 중에는 보통 free-drift 로 두므로 기본 False  #
+서비스 위성	attitude_kp	200.0	예	PD 자세 제어 비례 이득 [N·m/rad]  #
+서비스 위성	attitude_kd	400.0	예	PD 자세 제어 미분 이득 [N·m·s/rad]  #
+서비스 위성	attitude_max_torque	1.0	예	반작용휠 최대 토크 [N·m]  #
+궤도 환경 (LVLH 회전좌표계 상대 역학)	enabled	True	아니오	"시뮬레이션 좌표계 = 대상 기준 궤도의 LVLH 프레임. x: 진행 방향(along-track), z: 지구 반대(radial, 천정), y: 궤도면 수직(cross-track) 각 강체에 Hill(Clohessy-Wiltshire) 방정식의 겉보기 가속도와 중력구배 토크를 매 스텝 외력으로 적용한다. 60 s 포획 구간에서 크기는 mm~cm, 토크는 mN·m 수준이지만 ""실제 궤도 환경"" 재현을 위해 포함 (--no-orbit 으로 끔)"
+궤도 환경 (LVLH 회전좌표계 상대 역학)	altitude_km	500.0	예	기준 궤도 고도 (LEO 파편 밀집 고도대 가정)  #
+궤도 환경 (LVLH 회전좌표계 상대 역학)	mu_earth_m3s2	3.986004418e14	아니오	지구 중력 상수 (표준 상수)
+궤도 환경 (LVLH 회전좌표계 상대 역학)	earth_radius_km	6371.0	아니오	지구 평균 반경
+궤도 환경 (LVLH 회전좌표계 상대 역학)	apply_to_nodes	False	아니오	그물/테더 질점(0.05 kg)에는 미적용: 효과 mm 이하, 호출 비용만 큼
+궤도 환경 (LVLH 회전좌표계 상대 역학)	gravity_gradient_torque	True	아니오	대상·서비서에 3n^2 (r_hat x I r_hat) 토크 적용
+GUI 장면 연출 (물리에 영향 없음)	earth_texture	"""assets/earth.jpg"""	아니오	NASA Blue Marble (land_shallow_topo_2048). 없으면 단색 구
+GUI 장면 연출 (물리에 영향 없음)	three_js	"""assets/three.min.js"""	아니오	웹 뷰어에 내장할 three.js. 없으면 CDN 에서 불러오므로 인터넷 필요
+GUI 장면 연출 (물리에 영향 없음)	earth_visual_radius_m	300.0	아니오	지구를 실제 크기 대신 축소 구로 표현. 거리는 실제 고도에서 보이는 각크기(반각 asin(Re/(Re+h)))와 일치시킴 (GUI 원거리 클리핑 ~1000 m 이내)
+GUI 장면 연출 (물리에 영향 없음)	stars	2000	아니오	배경 별(디버그 포인트) 개수
+GUI 장면 연출 (물리에 영향 없음)	star_distance_m	900.0	아니오	GUI 원거리 클리핑(~1000 m) 이내
+GUI 장면 연출 (물리에 영향 없음)	sun_direction	(0.6, 0.5, 0.62)	아니오	태양광 방향 (GUI 조명)
+GUI 장면 연출 (물리에 영향 없음)	camera_follow	True	아니오	카메라 주시점을 대상-서비서 중점으로 자동 추적 (마우스 회전/줌은 유지)
+GUI 장면 연출 (물리에 영향 없음)	hud	True	아니오	시각·상대 각속도·단계 HUD 텍스트
+GUI 장면 연출 (물리에 영향 없음)	hud_interval	24	아니오	HUD/카메라 갱신 주기 [step]
+GUI 장면 연출 (물리에 영향 없음)	record_interval	8	아니오	프레임 녹화 주기 [step] (--record-frames)
+GUI 장면 연출 (물리에 영향 없음)	viewer_fps	30	아니오	웹 뷰어(--viewer) 궤적 기록 주기 [frame/s]
+GUI 장면 연출 (물리에 영향 없음)	frame_size	(1280, 720)	아니오	
+몬테카를로 섭동 (시드 기반, 실제 임무의 불확실성 재현)	spin_axis_jitter_deg	0.0	예	기본값 0 → 단일 시행 재현성. 격자 실험 스크립트(run_grid_experiment.py)에서 현실적 값으로 덮어씀 회전축 방향 무작위 편차 표준편차 [deg] (지상 관측으로 추정한 회전축의 불확실성)  #
+몬테카를로 섭동 (시드 기반, 실제 임무의 불확실성 재현)	spin_rate_jitter_frac	0.0	예	회전 속도 상대 오차 표준편차 (관측 불확실성)  #
+몬테카를로 섭동 (시드 기반, 실제 임무의 불확실성 재현)	relative_position_error_m	0.0	예	랑데부 종료 시 횡방향(y,z) 상대 위치 오차 표준편차 [m]  #
+몬테카를로 섭동 (시드 기반, 실제 임무의 불확실성 재현)	relative_velocity_error_mps	0.0	예	잔류 상대 속도 오차 표준편차 (3축) [m/s]  #
+몬테카를로 섭동 (시드 기반, 실제 임무의 불확실성 재현)	servicer_pointing_error_deg	0.0	예	서비서 지향(자세) 오차 표준편차 [deg]  #
+초기 이격 (표면-표면 거리, 방식별)	arm	0.3	예	팔 작업 반경 내 근접 정지 상태  #
+초기 이격 (표면-표면 거리, 방식별)	net	6.0	예	그물 발사 거리  #
+초기 이격 (표면-표면 거리, 방식별)	harpoon	8.0	예	작살 발사 거리  #
+1) 로봇팔	link_lengths	(0.6, 0.6, 0.5, 0.4, 0.3, 0.2)	예	6관절, 총 도달거리 2.6 m  #
+1) 로봇팔	joint_axes	((0, 0, 1), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 0, 1), (1, 0, 0))	아니오	요-피치-피치-피치-요-롤
+1) 로봇팔	link_radius	0.05	예	링크 캡슐 반경 [m]  #
+1) 로봇팔	link_mass	8.0	예	링크 질량 [kg]  #
+1) 로봇팔	tool_mass	2.0	예	그리퍼 질량 [kg]  #
+1) 로봇팔	tool_radius	0.06	아니오	그리퍼(구) 반경 [m]
+1) 로봇팔	joint_max_torque	200.0	예	관절 최대 토크 [N·m]  #
+1) 로봇팔	joint_max_velocity	1.0	예	관절 최대 각속도 [rad/s]  #
+1) 로봇팔	tool_max_speed	1.0	예	그리퍼 목표점 이동 속도 한계 [m/s]. 목표점을 직선(데카르트) 경로로 보간해 관절보간 시 호를 그리며 대상을 관통하는 현상 방지  #
+1) 로봇팔	joint_damping	2.0	예	관절 점성 감쇠 [N·m·s/rad]  #
+1) 로봇팔	joint_limit_deg	170.0	예	관절 가동 범위 ± [deg]  #
+1) 로봇팔	position_gain	0.3	예	PyBullet 위치제어 이득 (무차원)  #
+1) 로봇팔	ready_pose	(1.2, 0.6, -1.2, 0.6, 0.0, 0.0)	아니오	대기 자세 [rad]: 요 1.2 rad 로 옆으로 접어 대상과 초기 겹침 방지
+1) 로봇팔	approach_standoff	0.3	예	파지점 법선 방향 대기 거리 [m]  #
+1) 로봇팔	pre_approach_distance	0.6	예	대기점보다 법선 방향으로 더 바깥의 예비 접근점 거리 [m]. 대기 자세→대기점 직행 시 대상 관통 방지  #
+1) 로봇팔	approach_cone_deg	60.0	예	파지점 법선이 어깨 방향과 이 각도 이내일 때만 접근 (그 외에는 대상 정면 안전 대기점에서 대기)  #
+1) 로봇팔	approach_tolerance	0.08	아니오	대기점 도달 허용오차 [m]
+1) 로봇팔	grasp_tolerance	0.05	예	파지 성립 위치 허용오차 [m] (그리퍼 개구 폭 가정)  #
+1) 로봇팔	grasp_max_rel_speed	0.5	예	파지 성립 최대 상대속도 [m/s]  #
+1) 로봇팔	grasp_force_limit	2000.0	예	그리퍼 유지력 한계 [N] (PyBullet 제약 maxForce). 초과 요구 시 미끄러짐 발생  #
+1) 로봇팔	grasp_closure_time	1.0	예	그리퍼 닫힘 시간 [s]. 이 동안 유지력 한계를 0→최대로 선형 증가(순응 파지)  #
+1) 로봇팔	slip_tolerance	0.10	예	파지점이 그리퍼 중심에서 이만큼 벗어나면 이탈(그리퍼 개구 폭 가정) [m]  #
+1) 로봇팔	reach_margin	0.95	아니오	도달 가능 판정 시 총 링크 길이의 비율
+1) 로봇팔	post_grasp_mode	"""brake"""	아니오	"""brake"": 파지 후 관절을 속도 0 목표(토크 제한)로 → 관절이 브레이크 역할"
+1) 로봇팔	reach_fraction_at_standoff	0.6	아니오	초기 배치: 대기점이 어깨로부터 도달거리의 이 비율 위치에 오도록
+2) 그물	grid_n	9	예	한 변 질점 수 (9x9 = 81 질점)  #
+2) 그물	size_by_target	"{""small"": 2.0, ""medium"": 7.0, ""large"": 5.0}"	예	전개 후 한 변 길이 [m], 대상 외접 지름의 ~1.4배  #
+2) 그물	areal_density	0.05	예	질량은 그물 면적에 비례한다. 질점 질량을 크기와 무관하게 고정하면 작은 그물이 비현실적으로 무거워져 (2 m 그물이 7.9 kg → 10 kg 대상의 79 %) 대상을 포획하지 않고 쳐서 날려버린다. 그물 면밀도 [kg/m^2] → 질점 질량 = 면밀도 x 면적 / 질점수  #
+2) 그물	corner_mass_multiple	20.0	예	모서리 추 질량 = 일반 질점 질량 x 이 값 (전개용 추)  #
+2) 그물	node_radius_ratio	0.45	아니오	질점 충돌 반경 = 격자 간격 x 비율. 격자 사이로 대상이 빠져나가지 않게 하는 모델링 가정
+2) 그물	spring_k_factor	0.20	아니오	"스프링 계수는 명시적(반-암시적 오일러) 적분의 안정조건에서 유도한다. 강성  k <= 0.25 * m / dt^2 , 감쇠  c <= 0.5 * m / dt 그물 질량이 대상별로 달라지므로 계수를 고정값으로 두면 작은 그물에서 발산한다. 아래 비율은 안정 한계 대비 여유를 둔 값이며, 그물실은 ""안정조건이 허용하는 한 비신축성""으로 모델링된다. k = 이 값 x m / dt^2  (안정 한계 0.25)"
+2) 그물	spring_c_factor	0.30	아니오	c = 이 값 x m / dt    (안정 한계 0.5)
+2) 그물	spring_reference_dt	None	아니오	"계수를 dt 에서 유도하므로 dt 를 바꾸면 그물 모델 자체가 달라진다. 시간 스텝 수렴성 시험처럼 ""모델은 고정하고 적분 스텝만"" 바꿔야 할 때는 여기에 기준 dt 를 넣어 계수를 고정한다. None 이면 실제 dt 를 쓴다."
+2) 그물	shear_springs	True	아니오	대각(전단) 스프링 포함 여부
+2) 그물	tension_only	True	아니오	실은 압축력을 전달하지 않음
+2) 그물	deploy_speed	4.0	예	발사 속도 [m/s]  #
+2) 그물	folded_ratio	0.3	아니오	발사 시 접힌 크기 / 전개 크기
+2) 그물	open_at_fraction	0.7	아니오	비행 시간의 이 비율 시점에 완전 전개되도록 모서리 추 측방 속도 계산
+2) 그물	launch_offset	1.0	아니오	서비서 발사구에서 그물 초기 중심까지 거리 [m]
+2) 그물	launch_angle_error_deg	1.0	예	발사 방향 오차 표준편차 (시드 랜덤)  #
+2) 그물	tether_length_factor	1.05	예	테더: 포획 직후 팽팽해져야 대상의 각운동량이 서비서로 전달된다(감속 경로). 자유 길이가 실제 도달 거리보다 길면 인장 전용 스프링이 끝까지 힘을 내지 않아 감속이 전혀 일어나지 않는다. 테더 자유 길이 = (초기 이격 거리 + 대상 반경) x 이 값  #
+2) 그물	tether_k_factor	0.20	아니오	테더 계수도 같은 방식으로 모서리 추 질량에서 유도한다 (테더는 모서리 추에 연결된다). k = 이 값 x 모서리 추 질량 / dt^2
+2) 그물	tether_c_factor	0.30	아니오	c = 이 값 x 모서리 추 질량 / dt
+2) 그물	winch_enabled	True	아니오	윈치: 결합 성립 후 테더를 되감아 장력을 유지한다. 실제 그물 포획 임무의 회수 단계에 해당.
+2) 그물	winch_start_delay	1.0	예	결합 성립 후 되감기 시작까지 지연 [s]  #
+2) 그물	winch_reel_rate	0.35	예	되감기 속도 [m/s]  #
+2) 그물	winch_min_length_factor	0.04	예	"최소 자유 길이 비율. 이 값이 크면 되감기 완료 후 테더가 느슨해져 장력이 0 이 되고 감속이 멈춘다. 작게 두면 스프링이 항상 늘어난 상태가 되어 winch_max_tension 으로 제한되는 ""정장력 윈치""로 동작한다."
+2) 그물	winch_max_tension	250.0	예	테더 장력 상한 [N]. 초과 시 윈치가 풀려 장력을 유지  #
+2) 그물	closing_delay	0.5	예	첫 접촉 후 조임(closing) 시작까지 지연 [s]  #
+2) 그물	closing_duration	2.0	예	둘레 스프링 자유길이 축소에 걸리는 시간 [s]  #
+2) 그물	closing_ratio	0.15	예	조임 완료 후 둘레 자유길이 비율  #
+2) 그물	min_contact_nodes	4	예	결합 유지 판정: 대상과 접촉 중인 질점 최소 개수  #
+2) 그물	lateral_friction	0.6	예	그물-대상 마찰  #
+2) 그물	restitution	0.0	예	그물 질점 반발계수 (섬유, 거의 비탄성)  #
+3) 작살	mass	2.0	예	발사체 질량 [kg]  #
+3) 작살	radius	0.03	아니오	발사체 반경 [m]
+3) 작살	length	0.4	예	발사체 길이 [m]  #
+3) 작살	speed	12.0	아니오	발사 속도 [m/s]. RemoveDEBRIS 는 2019년 궤도상 실증에서 20 m/s 로 발사했다 (Aglietti 외, Acta Astronautica 168, 2019, pp.310-322). 여기서는 보수적으로 12 m/s 를 쓰고 민감도 분석에서 실증값 20 m/s 를 포함하는 범위로 확인한다.
+3) 작살	aim_error_deg	0.5	예	조준 오차 표준편차 [deg] (시드 랜덤)  #
+3) 작살	min_penetration_speed	4.0	예	관통에 필요한 최소 법선 충돌 속도 [m/s]  #
+3) 작살	max_incidence_deg	45.0	예	관통 허용 최대 입사각 (표면 법선 기준)  #
+3) 작살	anchor_break_force	3000.0	예	고정부(미늘) 이탈 한계 힘 [N]  #
+3) 작살	embed_force	1500.0	예	관통(박힘) 모델. 작살은 관통 깊이에 걸쳐 유한한 힘으로 감속한다. 감속력 1500 N 이면 2 kg, 법선 속도 6 m/s 작살이 약 2.4 cm 에 걸쳐 멈춘다 (s = m v^2 / 2F). 이 값이 파단력보다 작아야 박히는 과정 자체에서 뜯기지 않는다. 박힘 구간 최대 감속력 [N]  #
+3) 작살	embed_time	0.05	예	박힘 구간 길이 [s]. 이 동안은 파단 판정을 하지 않는다  #
+3) 작살	tether_length_factor	1.05	예	테더 자유 길이 = 초기 이격 거리 x 이 값  #
+3) 작살	tether_nodes	10	아니오	테더를 이루는 중간 질점 수 (대상 둘레 감김 표현용)
+3) 작살	tether_node_mass	0.2	예	테더 질점 질량 [kg]. 총 2 kg (~0.18 kg/m) 급 하중 지지 테더를 가정. 감쇠 안정조건 c*dt/m < 0.5 때문에 질점이 가벼우면 충분한 감쇠를 줄 수 없고, 감쇠가 부족하면 대상이 테더에 매달려 계속 진동해 상대 회전이 수렴하지 않는다.
+3) 작살	tether_node_radius	0.02	아니오	테더 질점 충돌 반경 [m]
+3) 작살	tether_k	500.0	예	테더 세그먼트 강성 [N/m]  #
+3) 작살	tether_c	30.0	예	테더 세그먼트 감쇠 [N·s/m]. 테더 진동을 흡수해 상대 회전을 수렴시킨다  #
+3) 작살	winch_enabled	True	아니오	윈치: 관통·고정 후 테더를 되감아 장력을 유지한다. 고정점의 모멘트 암을 통해 대상에 감속 토크가 걸린다.
+3) 작살	winch_start_delay	0.5	예	고정 성립 후 되감기 시작까지 지연 [s]  #
+3) 작살	winch_reel_rate	0.35	예	되감기 속도 [m/s]  #
+3) 작살	winch_min_length_factor	0.04	예	"최소 자유 길이 비율. 이 값이 크면 되감기 완료 후 테더가 느슨해져 장력이 0 이 되고 감속이 멈춘다. 작게 두면 스프링이 항상 늘어난 상태가 되어 winch_max_tension 으로 제한되는 ""정장력 윈치""로 동작한다."
+3) 작살	winch_max_tension	250.0	예	테더 장력 상한 [N]. anchor_break_force 보다 충분히 작아야 고정부가 버틴다  #
+3) 작살	bounce_fail_delay	2.0	아니오	튕겨나간 뒤 이 시간 후 조기 종료 [s]
+3) 작살	use_ccd	True	아니오	고속 발사체 터널링 방지용 연속 충돌 검출

@@ -51,8 +51,8 @@ python capture_sim.py --method arm --target medium --spin 10
 | `demo/` | 방식별 샘플 리플레이. 브라우저로 바로 열면 된다 |
 | `manuscript/` | 학술대회 원고(제출용·전체판), 그림, 확인 완료된 참고문헌 |
 
-생성물(`results/` `comparison/` `verification/` `sensitivity/` `results_axis/` `report/` `logs/`)은 git 추적에서 제외한다.
-스크립트로 언제든 재생성된다.
+실험 결과(`results/` `comparison/` `verification/` `sensitivity/` `results_axis/` `report/`)는 저장소에 함께 보관한다.
+스크립트로 재생성할 수 있지만 전체 계산에 하루 가까이 걸리므로 논문의 근거 자료로 남겨 둔다. 실행 로그(`logs/`)만 제외한다.
 
 ---
 
