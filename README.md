@@ -46,6 +46,7 @@ python capture_sim.py --method arm --target medium --spin 10
 | [analyze_axis.py](analyze_axis.py) | 회전축 추가 실험(중형 대상 x·y 축) 분석 |
 | [make_report.py](make_report.py) | 산출물에서 논문용 표·수치를 뽑아 정리 |
 | [build_site.py](build_site.py) | 리플레이를 웹 배포용 정적 사이트로 묶음 |
+| [.github/workflows/pages.yml](.github/workflows/pages.yml) | `site/` 를 GitHub Pages 로 배포 |
 | [viewer_template.html](viewer_template.html) | 웹 3D 리플레이 뷰어의 UI 틀 |
 | `assets/` | 지구 텍스처(NASA Blue Marble), 뷰어에 내장할 three.js |
 | `demo/` | 방식별 샘플 리플레이. 브라우저로 바로 열면 된다 |
@@ -281,29 +282,35 @@ site/
   vercel.json          캐시 헤더
 ```
 
-**배포 방법 1 — GitHub 연동 (권장).** 저장소 루트의 [vercel.json](vercel.json) 이 출력 폴더를 `site/` 로
-지정해 두었으므로, Vercel 에서 이 저장소를 Import 하면 별도 설정 없이 배포된다. 빌드 명령도 필요 없다.
-이후 `git push` 할 때마다 자동으로 다시 배포된다.
+**배포 방법 1 — GitHub Pages (현재 사용 중).** 배포본 주소는
+<https://leeejunseo.github.io/2026_Future-Aerospace-Conference/> 다.
+[.github/workflows/pages.yml](.github/workflows/pages.yml) 이 `main` 에 `site/` 변경이 푸시될 때마다
+`site/` 를 그대로 올린다. 빌드 명령은 없다. 처음 한 번은 저장소 Settings → Pages → Source 를
+"GitHub Actions" 로 바꿔 두어야 한다. 무료 계정은 공개 저장소에서만 Pages 를 쓸 수 있어서 저장소를 공개로 전환했다.
 
-이 방식은 **`site/` 가 저장소에 들어 있어야 동작한다.** Git 연동 배포는 저장소에 있는 파일만 올리기 때문이다.
+**배포 방법 2 — Vercel 연동.** 저장소 루트의 [vercel.json](vercel.json) 이 출력 폴더를 `site/` 로
+지정해 두었으므로, Vercel 에서 이 저장소를 Import 하면 별도 설정 없이 배포된다. 빌드 명령도 필요 없다.
+이후 `git push` 할 때마다 자동으로 다시 배포된다. 비공개 저장소에서도 동작한다.
+
+두 방식 모두 **`site/` 가 저장소에 들어 있어야 동작한다.** Git 연동 배포는 저장소에 있는 파일만 올리기 때문이다.
 그래서 `site/` 는 생성물이지만 예외적으로 git 추적 대상에 둔다. 리플레이를 새로 만들었다면
 `python build_site.py` 로 다시 빌드한 뒤 커밋해야 배포본에 반영된다.
 
-**배포 방법 2 — CLI 직접 배포.** 저장소와 무관하게 로컬 폴더를 바로 올린다.
+**배포 방법 3 — CLI 직접 배포.** 저장소와 무관하게 로컬 폴더를 바로 올린다.
 
 ```bash
 npx vercel --cwd site           # 미리보기 URL 발급
 npx vercel --cwd site --prod    # 운영 URL 발급
 ```
 
-Netlify(`npx netlify deploy --dir site --prod`)나 GitHub Pages 처럼 정적 파일을 그대로 서빙하는 곳이면
+Netlify(`npx netlify deploy --dir site --prod`)처럼 정적 파일을 그대로 서빙하는 곳이면
 어디든 같은 방식으로 올라간다. 서버 코드가 없어 무료 플랜으로 충분하다.
 
 빌드에는 물리 엔진이 필요 없다. `build_site.py` 는 `capture_sim` 을 불러올 수 없는 환경에서도
 궤적 자료에 들어 있는 값으로 대신 동작하므로, PyBullet 이 없는 배포 서버에서도 실행할 수 있다.
 
-`index.html` 은 검색 엔진이 수집할 수 있는 공개 페이지가 된다. 발표 전에 공개하고 싶지 않다면
-Vercel 프로젝트 설정에서 비밀번호 보호를 걸거나 미리보기 URL 만 공유할 것.
+배포본은 검색 엔진이 수집할 수 있는 공개 페이지가 된다. GitHub Pages 에는 접근 제한을 걸 수 없으므로,
+공개하고 싶지 않은 리플레이가 생기면 Vercel 로 옮겨 비밀번호 보호를 걸거나 미리보기 URL 만 공유할 것.
 
 ### PyBullet 내장 GUI
 
