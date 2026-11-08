@@ -49,7 +49,7 @@ python capture_sim.py --method arm --target medium --spin 10
 | [.github/workflows/pages.yml](.github/workflows/pages.yml) | `site/` 를 GitHub Pages 로 배포 |
 | [viewer_template.html](viewer_template.html) | 웹 3D 리플레이 뷰어의 UI 틀 |
 | `assets/` | 지구 텍스처(NASA Blue Marble), 뷰어에 내장할 three.js |
-| `demo/` | 방식별 샘플 리플레이. 브라우저로 바로 열면 된다 |
+| `demo/` | 샘플 리플레이 4개(중형은 세 방식 모두). 인터넷 없이 더블클릭으로 열리는 단독 HTML 이라 발표 비상용으로 쓴다 |
 | `manuscript/` | 학술대회 원고(제출용·전체판), 그림, 확인 완료된 참고문헌 |
 
 실험 결과(`results/` `comparison/` `verification/` `sensitivity/` `results_axis/` `report/`)는 저장소에 함께 보관한다.
@@ -254,12 +254,13 @@ python capture_sim.py --method arm --target large --spin 20 --viewer arm20.html 
   접촉·결합·이탈 시점이 표시되고, 재생 중 첫 접촉·그물 입구 조임·감속 완료 순간과 최종 판정을 화면에 크게 알린다.
 - **카메라**: 마우스 드래그 회전, 휠 줌, Shift 또는 오른쪽 드래그 팬, 터치 핀치 줌.
   중점·대상·서비서·자유 네 가지 추적 모드(키 1~4), `R` 리셋, `O` 자동 회전.
+  중점 모드는 두 위성이 처음보다 멀어지면 그 비율만큼 물러나 둘 다 화면에 남긴다(놓친 뒤 떠내려가는 실패 시행).
 - **텔레메트리**: 시각, 상대 각속도, 대상 각속도, 거리, 결합 상태, 방식별 상태(파지 단계·그물 접촉 질점 수·작살 상태)를 실시간 표시.
 - **그래프**: 상대 각속도 시계열에 임계값 선과 결합 유지 구간 음영. 클릭하면 그 시각으로 이동한다.
 - **발표 모드**: `P` 또는 "발표 모드" 버튼. 오른쪽 패널과 카메라 줄을 숨기고 상대 각속도·결합·현재 단계만 크게 띄운다.
   주소 뒤에 `?present` 를 붙이면 처음부터 발표 모드로 열린다.
 - 스프링·질점·회전축·파지점·궤적·지구 표시 토글, 스크린샷, 전체화면. `?` 또는 `H` 로 조작법.
-  그물 질점은 실제 충돌 반경으로 그려 솜뭉치처럼 보이므로, 그물 모양을 설명할 때는 "질점" 을 끄면 된다.
+  그물 질점은 실제 충돌 반경으로 그려 솜뭉치처럼 보이므로 발표 모드에서는 자동으로 숨긴다. 그 밖에는 `N` 이나 "질점" 으로 끈다.
 
 지구 텍스처와 three.js 를 모두 내장하므로 인터넷 없이 열린다(한글 글꼴만 온라인일 때 Pretendard 를 받아 쓴다).
 파일은 시행 길이에 따라 1~7 MB 다.
@@ -272,6 +273,7 @@ python capture_sim.py --method arm --target large --spin 20 --viewer arm20.html 
 ```bash
 python build_site.py                 # demo/*.html 로 site/ 생성
 python build_site.py --thumbs        # 리플레이 썸네일도 새로 찍는다 (Edge 또는 Chrome 필요)
+python build_site.py --standalone demo  # demo/ 의 단독 HTML 도 새 뷰어 템플릿으로 다시 쓴다
 python build_site.py --serve         # 빌드 후 http://localhost:8000 에서 확인
 python build_site.py --inputs a.json b.html --out site
 ```
@@ -280,10 +282,18 @@ python build_site.py --inputs a.json b.html --out site
 궤적 JSON(`--trajectory`)을 직접 줘도 된다.
 
 첫 화면은 발표용으로 꾸몄다. 연구 소개와 실험 규모, 대상별 회전 속도-성공률 곡선(핵심 결과),
-썸네일이 붙은 리플레이 목록 순서다. 핵심 결과는 `results/results_summary.csv` 에서 그리며,
-원고 요약문과 같은 기준(회전하는 대상만 집계)이라 수치가 원고와 일치한다. CSV 가 없으면 그 절만 빠진다.
-썸네일은 헤드리스 브라우저로 각 뷰어를 `?clean&t=첫 접촉+2.5초` 로 열어 찍는다.
+회전축 추가 실험 카드, 썸네일이 붙은 리플레이 목록 순서다. 핵심 결과는 `results/results_summary.csv` 에서,
+회전축 카드는 `results_axis/axis_summary.csv`·`axis_tests.csv` 에서 그린다. 원고 요약문과 같은 기준(회전하는 대상만
+집계)이라 수치가 원고와 일치한다. CSV 가 없으면 그 절만 빠진다. 리플레이는 대상 → 방식 순으로 놓여
+중형 위성에서 로봇팔(실패)·그물·작살이 나란히 비교된다.
+썸네일은 헤드리스 브라우저로 각 뷰어를 `?clean&nodes=0.3&t=첫 접촉+2.5초` 로 열어 찍는다.
 리플레이를 바꿨을 때만 `--thumbs` 를 다시 주면 된다. 빌드가 `site/` 를 지우지 않아 한 번 찍은 썸네일은 남는다.
+페이지마다 파비콘과 링크 미리보기(Open Graph) 태그가 붙어 카카오톡 등에 주소를 보내면 제목과 썸네일이 뜬다.
+미리보기 그림은 절대 주소여야 하므로 GitHub Pages 가 아닌 곳에 올리면 `--site-url` 을 준다.
+
+**발표 비상용.** 행사장 인터넷이 막히거나 느리면 `demo/` 폴더를 통째로 USB 에 담아 가서 HTML 을 더블클릭한다.
+three.js·지구 텍스처·궤적이 파일 안에 들어 있고, 위쪽 막대로 네 시나리오를 오갈 수 있다. 발표 모드·사건 알림도 그대로다.
+한글 글꼴만 인터넷이 없으면 맑은 고딕으로 바뀐다. 뷰어 템플릿을 고쳤다면 `--standalone demo` 로 다시 만든다.
 
 ```
 site/
@@ -291,7 +301,7 @@ site/
   runs/<이름>.html        뷰어. 공유 자산을 참조하고, 위쪽에 첫 화면과 다른 시나리오로 가는 길이 붙는다
   data/<이름>.js          궤적 자료
   assets/                 three.min.js, earth.jpg (한 번만 올라간다)
-  assets/thumbs/          리플레이 썸네일
+  assets/thumbs/          리플레이 썸네일 (링크 미리보기 그림으로도 쓴다)
   vercel.json             캐시 헤더
 ```
 

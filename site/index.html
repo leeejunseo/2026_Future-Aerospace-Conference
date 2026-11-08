@@ -4,7 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>회전 우주 파편의 포획 방식 비교</title>
-<meta name="description" content="로봇팔·그물·작살의 회전 우주 파편 포획을 물리 시뮬레이션으로 비교한 결과와 3D 리플레이">
+<meta name="description" content="로봇팔·그물·작살의 회전 우주 파편 포획을 4,320회 물리 시뮬레이션으로 비교한 결과와 3D 리플레이">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2731%27%20fill%3D%27%2305070d%27%2F%3E%3Cellipse%20cx%3D%2732%27%20cy%3D%2732%27%20rx%3D%2725%27%20ry%3D%279%27%20fill%3D%27none%27%20stroke%3D%27%235fc9ff%27%20stroke-width%3D%273.5%27%20transform%3D%27rotate%28-28%2032%2032%29%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%278%27%20fill%3D%27%2386e07f%27%2F%3E%3C%2Fsvg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="회전 우주 파편의 포획 방식 비교">
+<meta property="og:description" content="로봇팔·그물·작살의 회전 우주 파편 포획을 4,320회 물리 시뮬레이션으로 비교한 결과와 3D 리플레이">
+<meta property="og:url" content="https://leeejunseo.github.io/2026_Future-Aerospace-Conference/">
+<meta property="og:image" content="https://leeejunseo.github.io/2026_Future-Aerospace-Conference/assets/thumbs/net_medium_10degs.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -87,6 +94,23 @@ section.wrap{padding-top:88px;scroll-margin-top:-60px}
 .res-rank li:first-child{color:var(--text);font-weight:600}
 .res-rank i{width:9px;height:9px;border-radius:50%;background:var(--c)}
 .res-rank b{margin-left:auto;font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+
+.axis{margin-top:18px;padding:24px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.axis h3{margin:8px 0 6px;font-size:21px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+.axis>p{margin:0 0 20px;max-width:780px;color:var(--muted);font-size:14px;line-height:1.7}
+.axis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px 28px}
+.axis-name{margin-bottom:10px;font-size:16px;font-weight:700}
+.axis-name span{display:block;color:var(--muted);font-size:12.5px;font-weight:500}
+.bar{display:grid;grid-template-columns:44px 1fr 52px;align-items:center;gap:10px;margin:7px 0;color:var(--muted);font-size:13px}
+.bar.win{color:var(--text);font-weight:600}
+.track{height:10px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}
+.track i{display:block;height:100%;border-radius:5px;background:var(--c)}
+.bar:not(.win) .track i{opacity:.55}
+.bar b{text-align:right;font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.axis-gap{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px}
+.axis-gap b{color:var(--text);font-family:var(--mono);font-weight:500}
+.axis-gap .ns{color:var(--warn)}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
 
 .run{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;background:var(--panel);border:1px solid var(--line);
 text-decoration:none;transition:border-color .2s,transform .2s,box-shadow .2s}
@@ -187,14 +211,37 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
           <ol class="res-rank"><li style="--c:#5fc9ff"><i></i>로봇팔<b>56.4%</b></li><li style="--c:#ffb457"><i></i>작살<b>5.3%</b></li><li style="--c:#86e07f"><i></i>그물<b>0.0%</b></li></ol>
         </article>
     </div>
+    <div class="axis">
+      <div class="eyebrow">추가 실험 · 중형 500 kg 위성</div>
+      <h3>회전축을 바꿔도 그물이 1위지만, 2위와의 차이는 크게 줄었다</h3>
+      <p>본 실험은 중형 대상을 z 축으로 돌렸다. 같은 시드로 x·y 축을 돌린 2,700회를 더해 비교했다(축·방식당 450회).
+      1·2위 차이의 p 는 Holm 으로 보정한 McNemar 검정 값이다.</p>
+      <div class="axis-grid">
+        <div>
+          <div class="axis-name">z 축<span>본 실험 · 최대 관성축</span></div>
+          <div class="bar" style="--c:#5fc9ff"><span>로봇팔</span><span class="track"><i style="width:12.4%"></i></span><b>12.4%</b></div><div class="bar win" style="--c:#86e07f"><span>그물</span><span class="track"><i style="width:71.8%"></i></span><b>71.8%</b></div><div class="bar" style="--c:#ffb457"><span>작살</span><span class="track"><i style="width:14.0%"></i></span><b>14.0%</b></div>
+          <div class="axis-gap">1·2위 차이 <b>+57.8 %p</b> · p < 0.001</div>
+        </div>
+        <div>
+          <div class="axis-name">x 축<span>접근축 방향 · 중간 관성축</span></div>
+          <div class="bar" style="--c:#5fc9ff"><span>로봇팔</span><span class="track"><i style="width:39.3%"></i></span><b>39.3%</b></div><div class="bar win" style="--c:#86e07f"><span>그물</span><span class="track"><i style="width:49.8%"></i></span><b>49.8%</b></div><div class="bar" style="--c:#ffb457"><span>작살</span><span class="track"><i style="width:5.8%"></i></span><b>5.8%</b></div>
+          <div class="axis-gap">1·2위 차이 <b>+10.4 %p</b> · p = 0.004</div>
+        </div>
+        <div>
+          <div class="axis-name">y 축<span>태양전지판 방향 · 최소 관성축</span></div>
+          <div class="bar" style="--c:#5fc9ff"><span>로봇팔</span><span class="track"><i style="width:32.9%"></i></span><b>32.9%</b></div><div class="bar win" style="--c:#86e07f"><span>그물</span><span class="track"><i style="width:39.6%"></i></span><b>39.6%</b></div><div class="bar" style="--c:#ffb457"><span>작살</span><span class="track"><i style="width:7.1%"></i></span><b>7.1%</b></div>
+          <div class="axis-gap">1·2위 차이 <b>+6.7 %p</b> · p = 0.099 · <span class="ns">유의하지 않음</span></div>
+        </div>
+      </div>
+    </div>
   </section>
   <section id="replays" class="wrap">
     <div class="sec-head">
       <div class="eyebrow">3D 리플레이</div>
       <h2>포획 순간 다시 보기</h2>
-      <p>방식마다 대표 시행 하나를 물리 엔진이 계산한 궤적 그대로 재생한다. 시각화는 결과를 바꾸지 않는다.</p>
+      <p>중형 500 kg 위성은 로봇팔·그물·작살을 모두 실어 같은 대상에서 결과가 어떻게 갈리는지 비교할 수 있다. 물리 엔진이 계산한 궤적을 그대로 재생하며, 시각화는 결과를 바꾸지 않는다.</p>
     </div>
-    <div class="grid3">
+    <div class="grid4">
 
       <a class="run" href="runs/arm_small_10degs.html" style="--c:#5fc9ff">
         <div class="thumb"><img src="assets/thumbs/arm_small_10degs.jpg" alt="로봇팔 · 소형 10 kg 포획 장면" loading="lazy"><span class="badge ok">포획 성공</span><span class="playbtn" aria-hidden="true">▶</span></div>
@@ -206,6 +253,19 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
             <div><dt>최대 충격량</dt><dd>2.2 N·s</dd></div>
             <div><dt>잔류 상대 각속도</dt><dd>0.00 °/s</dd></div>
             <div><dt>서비서 자세 변화</dt><dd>21°</dd></div>
+          </dl>
+        </div>
+      </a>
+      <a class="run" href="runs/arm_medium_10degs.html" style="--c:#5fc9ff">
+        <div class="thumb"><img src="assets/thumbs/arm_medium_10degs.jpg" alt="로봇팔 · 중형 500 kg 포획 장면" loading="lazy"><span class="badge no">포획 실패</span><span class="playbtn" aria-hidden="true">▶</span></div>
+        <div class="run-body">
+          <h3><i></i>로봇팔 · 중형 500 kg</h3>
+          <div class="sub">회전 10 deg/s · 시드 1000 · 180 s 재생</div>
+          <dl class="stats">
+            <div><dt>감속 시간</dt><dd>—</dd></div>
+            <div><dt>최대 충격량</dt><dd>4.4 N·s</dd></div>
+            <div><dt>잔류 상대 각속도</dt><dd>9.19 °/s</dd></div>
+            <div><dt>서비서 자세 변화</dt><dd>180°</dd></div>
           </dl>
         </div>
       </a>
@@ -244,8 +304,8 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
         <h3>보는 법</h3>
         마우스 드래그로 회전, 휠로 확대·축소, <kbd>Shift</kbd> 드래그로 이동한다.
         <kbd>Space</kbd> 재생·정지, <kbd>1</kbd>~<kbd>4</kbd> 카메라 추적 대상,
-        <kbd>P</kbd> 발표 모드(핵심 수치만 크게), <kbd>O</kbd> 카메라 자동 회전.
-        그물이 솜뭉치처럼 보이면 아래 "질점" 을 꺼서 스프링 선만 남긴다.
+        <kbd>P</kbd> 발표 모드(핵심 수치만 크게), <kbd>O</kbd> 카메라 자동 회전, <kbd>N</kbd> 그물 질점 표시.
+        질점은 실제 충돌 반경으로 그려 그물이 솜뭉치처럼 보이므로, 발표 모드에서는 자동으로 숨겨 그물 선만 남긴다.
       </div>
       <div>
         <h3>성공 판정</h3>

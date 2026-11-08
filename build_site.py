@@ -29,6 +29,7 @@ Vercel, Netlify, GitHub Pages 처럼 정적 파일을 그대로 서빙하는 곳
     conda activate debris-sim
     python build_site.py                          # demo/*.html 로 site/ 생성
     python build_site.py --thumbs                 # 썸네일도 새로 찍는다 (Edge 또는 Chrome 필요)
+    python build_site.py --standalone demo        # 인터넷 없이 열리는 단독 뷰어도 새 템플릿으로 다시 쓴다
     python build_site.py --inputs a.json b.html   # 파일을 직접 지정
     python build_site.py --serve                  # 빌드 후 로컬에서 확인 (http://localhost:8000)
 
@@ -42,6 +43,7 @@ Vercel, Netlify, GitHub Pages 처럼 정적 파일을 그대로 서빙하는 곳
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 import glob
 import html
@@ -50,6 +52,7 @@ import os
 import re
 import shutil
 from typing import Dict, List, Optional
+from urllib.parse import quote
 
 # 정적 사이트를 만드는 데 물리 엔진은 필요 없다. capture_sim 을 불러올 수 있으면 설정값을 그대로 쓰고,
 # PyBullet 이 없는 환경(배포 서버 등)에서는 궤적 자료에 들어 있는 값과 아래 기본값으로 대체한다.
@@ -71,6 +74,16 @@ TARGET_LABELS = {"small": "소형 10 kg", "medium": "중형 500 kg", "large": "�
 TARGET_DESC = {"small": ("소형", "10 kg 큐브샛"), "medium": ("중형", "500 kg 위성"), "large": ("대형", "2,000 kg 로켓 단")}
 # 첫 화면 큰 그림으로 쓸 리플레이. 앞에 있는 방식의 썸네일이 있으면 그것을 쓴다
 HERO_PREFERENCE = ["net", "arm", "harpoon"]
+# 회전축 추가 실험(중형 대상). 축 설명은 README 의 회전축 표와 같다
+AXIS_ORDER = ["z", "x", "y"]
+AXIS_DESC = {"z": "본 실험 · 최대 관성축", "x": "접근축 방향 · 중간 관성축", "y": "태양전지판 방향 · 최소 관성축"}
+# 링크 미리보기(og:image)는 절대 주소여야 하므로 배포 주소를 알아야 한다. 다른 곳에 올리면 --site-url 로 바꾼다
+SITE_URL = "https://leeejunseo.github.io/2026_Future-Aerospace-Conference/"
+FAVICON = ("data:image/svg+xml," + quote(
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>"
+    "<circle cx='32' cy='32' r='31' fill='#05070d'/>"
+    "<ellipse cx='32' cy='32' rx='25' ry='9' fill='none' stroke='#5fc9ff' stroke-width='3.5' transform='rotate(-28 32 32)'/>"
+    "<circle cx='32' cy='32' r='8' fill='#86e07f'/></svg>", safe=""))
 
 VIEWER_THREE_MARKER = ('<!--__THREE_INLINE__--><script src="https://cdnjs.cloudflare.com/ajax/libs/'
                        'three.js/r128/three.min.js"></script>')
@@ -121,6 +134,24 @@ def load_summary(path: Optional[str]) -> Optional[Dict]:
     return curves
 
 
+def load_axis(folder: str) -> Optional[Dict]:
+    """회전축 추가 실험 요약. 축마다 방식별 성공률과 같은 축 안 방식 짝비교(Holm 보정 McNemar p)를 읽는다."""
+    summ, tests = os.path.join(folder, "axis_summary.csv"), os.path.join(folder, "axis_tests.csv")
+    if not (os.path.exists(summ) and os.path.exists(tests)):
+        return None
+    rates: Dict = {}
+    with open(summ, encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            rates.setdefault(row["axis"], {})[row["method"]] = (float(row["success_rate"]), int(row["n"]))
+    pvals: Dict = {}
+    with open(tests, encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            if row["family"] == "축 안 방식 비교":
+                a, b = (s.strip() for s in row["compare"].split("-"))
+                pvals[(row["axis"], a, b)] = pvals[(row["axis"], b, a)] = float(row["mcnemar_p_holm"])
+    return {"rates": rates, "p": pvals}
+
+
 def target_ranking(curves: Dict, target: str) -> List:
     """회전하는 대상(회전 속도 > 0)만 합친 방식별 성공률, 높은 순. 원고 요약문의 수치와 같은 기준이다."""
     out = []
@@ -135,20 +166,53 @@ def target_ranking(curves: Dict, target: str) -> List:
 # =============================================================================
 # 페이지 생성
 # =============================================================================
-def build_viewer_page(template: str, data_src: str, nav: Optional[Dict] = None, title: Optional[str] = None) -> str:
-    """공유 자산을 참조하는 뷰어 페이지. 궤적은 별도 스크립트가 먼저 넣어 둔다.
-    nav 를 주면 뷰어 위쪽에 첫 화면과 다른 시나리오로 가는 길이 생긴다."""
-    page = template
-    nav_js = f"<script>window.__SITE_NAV__={json.dumps(nav, ensure_ascii=False)};</script>\n" if nav else ""
-    page = page.replace(VIEWER_THREE_MARKER,
-                        f'{nav_js}<script src="{data_src}"></script>\n<script src="../assets/three.min.js"></script>')
-    page = page.replace("/*__DATA_JSON__*/", "")          # window.__DEBRIS_DATA__ 를 그대로 쓴다
-    page = page.replace("__EARTH_DATA_URI__", "../assets/earth.jpg")
+def head_meta(title: str, desc: str, url: Optional[str] = None, image: Optional[str] = None) -> str:
+    """파비콘과 링크 미리보기(카카오톡·슬랙 등이 읽는 Open Graph) 태그. url·image 는 절대 주소여야 한다."""
+    tags = [f'<link rel="icon" href="{FAVICON}">',
+            '<meta property="og:type" content="website">',
+            f'<meta property="og:title" content="{html.escape(title)}">',
+            f'<meta property="og:description" content="{html.escape(desc)}">']
+    if url:
+        tags.append(f'<meta property="og:url" content="{html.escape(url)}">')
+    if image:
+        tags += [f'<meta property="og:image" content="{html.escape(image)}">',
+                 '<meta name="twitter:card" content="summary_large_image">']
+    return "\n".join(tags) + "\n"
+
+
+def wrap_viewer(page: str, title: Optional[str], head: str = "") -> str:
     if title:
         page = re.sub(r"<title>.*?</title>", f"<title>{html.escape(title)}</title>", page, count=1)
     return ('<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-            '</head>\n<body style="margin:0">\n' + page + '\n</body>\n</html>\n')
+            + head + '</head>\n<body style="margin:0">\n' + page + '\n</body>\n</html>\n')
+
+
+def nav_script(nav: Optional[Dict]) -> str:
+    return f"<script>window.__SITE_NAV__={json.dumps(nav, ensure_ascii=False)};</script>\n" if nav else ""
+
+
+def build_viewer_page(template: str, data_src: str, nav: Optional[Dict] = None, title: Optional[str] = None,
+                      head: str = "") -> str:
+    """공유 자산을 참조하는 뷰어 페이지. 궤적은 별도 스크립트가 먼저 넣어 둔다.
+    nav 를 주면 뷰어 위쪽에 첫 화면과 다른 시나리오로 가는 길이 생긴다."""
+    page = template.replace(VIEWER_THREE_MARKER,
+                            f'{nav_script(nav)}<script src="{data_src}"></script>\n<script src="../assets/three.min.js"></script>')
+    page = page.replace("/*__DATA_JSON__*/", "")          # window.__DEBRIS_DATA__ 를 그대로 쓴다
+    page = page.replace("__EARTH_DATA_URI__", "../assets/earth.jpg")
+    return wrap_viewer(page, title, head)
+
+
+def build_standalone_page(template: str, data: Dict, three_js: str, earth_uri: str,
+                          nav: Optional[Dict] = None, title: Optional[str] = None) -> str:
+    """인터넷 없이 더블클릭으로 열리는 단독 뷰어. three.js·지구 텍스처·궤적을 모두 파일 안에 넣는다.
+    capture_sim.TrajectoryRecorder.build_html 과 같은 치환이라 이 파일도 다시 build_site 의 입력으로 쓸 수 있다.
+    물리 엔진 없이 만들 수 있으므로 뷰어 템플릿만 바꿨을 때 재시뮬레이션 없이 다시 만든다."""
+    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    page = template.replace("/*__DATA_JSON__*/window.__DEBRIS_DATA__ || null", payload)
+    page = page.replace("__EARTH_DATA_URI__", earth_uri)
+    page = page.replace(VIEWER_THREE_MARKER, nav_script(nav) + "<script>" + three_js + "</script>")
+    return wrap_viewer(page, title, f'<link rel="icon" href="{FAVICON}">\n')
 
 
 INDEX_CSS = """
@@ -231,6 +295,23 @@ section.wrap{padding-top:88px;scroll-margin-top:-60px}
 .res-rank li:first-child{color:var(--text);font-weight:600}
 .res-rank i{width:9px;height:9px;border-radius:50%;background:var(--c)}
 .res-rank b{margin-left:auto;font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+
+.axis{margin-top:18px;padding:24px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.axis h3{margin:8px 0 6px;font-size:21px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+.axis>p{margin:0 0 20px;max-width:780px;color:var(--muted);font-size:14px;line-height:1.7}
+.axis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px 28px}
+.axis-name{margin-bottom:10px;font-size:16px;font-weight:700}
+.axis-name span{display:block;color:var(--muted);font-size:12.5px;font-weight:500}
+.bar{display:grid;grid-template-columns:44px 1fr 52px;align-items:center;gap:10px;margin:7px 0;color:var(--muted);font-size:13px}
+.bar.win{color:var(--text);font-weight:600}
+.track{height:10px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}
+.track i{display:block;height:100%;border-radius:5px;background:var(--c)}
+.bar:not(.win) .track i{opacity:.55}
+.bar b{text-align:right;font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.axis-gap{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px}
+.axis-gap b{color:var(--text);font-family:var(--mono);font-weight:500}
+.axis-gap .ns{color:var(--warn)}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
 
 .run{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;background:var(--panel);border:1px solid var(--line);
 text-decoration:none;transition:border-color .2s,transform .2s,box-shadow .2s}
@@ -339,7 +420,58 @@ def success_chart(curves: Dict, target: str, winner: str) -> str:
     return "".join(out)
 
 
-def build_results(curves: Dict) -> str:
+def fmt_p(p: Optional[float]) -> str:
+    if p is None:
+        return ""
+    if p < 0.001:
+        return "p < 0.001"
+    return f"p = {p:.3f}" + (' · <span class="ns">유의하지 않음</span>' if p >= 0.05 else "")
+
+
+def build_axis(axis: Dict) -> str:
+    """회전축 추가 실험 카드: 축마다 방식별 성공률 막대와 1·2위 차이."""
+    cols, gaps, winners, n_cell, n_extra = [], {}, [], 0, 0
+    for ax in AXIS_ORDER:
+        r = axis["rates"].get(ax)
+        if not r or len(r) < 2:
+            continue
+        rank = sorted(r.items(), key=lambda kv: -kv[1][0])
+        (w, (rw, n_cell)), (s, (rs, _)) = rank[0], rank[1]
+        winners.append(w)
+        gaps[ax] = rw - rs
+        if ax != "z":
+            n_extra += sum(n for _, n in r.values())
+        bars = "".join(
+            f'<div class="bar{" win" if m == w else ""}" style="--c:{METHOD_COLORS[m]}"><span>{METHOD_LABELS[m]}</span>'
+            f'<span class="track"><i style="width:{r[m][0] * 100:.1f}%"></i></span><b>{r[m][0] * 100:.1f}%</b></div>'
+            for m in METHOD_ORDER if m in r)
+        cols.append(f"""
+        <div>
+          <div class="axis-name">{ax} 축<span>{AXIS_DESC.get(ax, '')}</span></div>
+          {bars}
+          <div class="axis-gap">1·2위 차이 <b>{(rw - rs) * 100:+.1f} %p</b> · {fmt_p(axis['p'].get((ax, w, s)))}</div>
+        </div>""")
+    if not cols:
+        return ""
+    if len(set(winners)) == 1:
+        lead = f"회전축을 바꿔도 {METHOD_LABELS[winners[0]]}이 1위다"
+        others = [g for a, g in gaps.items() if a != "z"]
+        if "z" in gaps and others and max(others) < gaps["z"] / 2:
+            lead = f"회전축을 바꿔도 {METHOD_LABELS[winners[0]]}이 1위지만, 2위와의 차이는 크게 줄었다"
+    else:
+        lead = "회전축에 따라 1위 방식이 달라진다"
+    return f"""
+    <div class="axis">
+      <div class="eyebrow">추가 실험 · 중형 500 kg 위성</div>
+      <h3>{lead}</h3>
+      <p>본 실험은 중형 대상을 z 축으로 돌렸다. 같은 시드로 x·y 축을 돌린 {n_extra:,}회를 더해 비교했다(축·방식당 {n_cell}회).
+      1·2위 차이의 p 는 Holm 으로 보정한 McNemar 검정 값이다.</p>
+      <div class="axis-grid">{"".join(cols)}
+      </div>
+    </div>"""
+
+
+def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
     cards = []
     n_per = 0
     for target in TARGET_ORDER:
@@ -372,11 +504,12 @@ def build_results(curves: Dict) -> str:
       곡선은 회전 속도별 성공률이고, 음영은 1위 방식의 95 % 신뢰구간이다.</p>
     </div>
     <div class="grid3">{"".join(cards)}
-    </div>
+    </div>{build_axis(axis) if axis else ""}
   </section>"""
 
 
-def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optional[Dict] = None) -> str:
+def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optional[Dict] = None,
+                axis: Optional[Dict] = None, site_url: str = SITE_URL) -> str:
     thumbs = thumbs or {}
     fx = scene_facts(runs)
 
@@ -418,7 +551,17 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
       <span class="hero-cap"><span class="playbtn" aria-hidden="true">▶</span>{METHOD_LABELS.get(m, m)} 포획 리플레이 보기</span>
     </a>"""
 
+    # 리플레이 절 설명. 한 대상에 여러 방식이 있으면 같은 대상에서 결과가 갈리는 비교를 짚어 준다
+    kinds = [run_kind(r) for r in runs]
+    multi = next((t for t in TARGET_ORDER if len({m for m, k in kinds if k == t}) > 1), None)
+    replay_note = "방식마다 대표 시행을 물리 엔진이 계산한 궤적 그대로 재생한다. 시각화는 결과를 바꾸지 않는다."
+    if multi:
+        ms = [METHOD_LABELS.get(m, m) for m in METHOD_ORDER if (m, multi) in kinds]
+        replay_note = (f"{TARGET_DESC[multi][0]} {TARGET_DESC[multi][1]}은 {'·'.join(ms)}을 모두 실어 같은 대상에서 "
+                       f"결과가 어떻게 갈리는지 비교할 수 있다. 물리 엔진이 계산한 궤적을 그대로 재생하며, 시각화는 결과를 바꾸지 않는다.")
+
     facts, lede_runs = "", ""
+    total = 0
     if curves:
         total = sum(p["n"] for pts in curves.values() for p in pts)
         spins = sorted({p["spin"] for pts in curves.values() for p in pts})
@@ -434,6 +577,9 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
         lede_runs = (f" 질량 {masses} kg 파편을 {spins[0]:g}–{spins[-1]:g} deg/s 로 회전시키고 "
                      f"{total:,}회 포획을 시도해, 상대 각속도가 {fx['threshold']:g} deg/s 이하로 잦아들어 "
                      f"{fx['hold']:g} 초 이상 유지되면 성공으로 셌다.")
+    desc = (f"로봇팔·그물·작살의 회전 우주 파편 포획을 {total:,}회 물리 시뮬레이션으로 비교한 결과와 3D 리플레이"
+            if total else "로봇팔·그물·작살의 회전 우주 파편 포획을 물리 시뮬레이션으로 비교한 3D 리플레이")
+    og_image = thumbs.get(hero["name"]) if hero else None
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -441,8 +587,8 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>회전 우주 파편의 포획 방식 비교</title>
-<meta name="description" content="로봇팔·그물·작살의 회전 우주 파편 포획을 물리 시뮬레이션으로 비교한 결과와 3D 리플레이">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<meta name="description" content="{html.escape(desc)}">
+{head_meta("회전 우주 파편의 포획 방식 비교", desc, site_url, site_url + og_image if og_image else None)}<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>{INDEX_CSS}</style>
 </head>
@@ -463,14 +609,14 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
       <div class="cta">{'<a class="btn primary" href="#results">핵심 결과 보기</a>' if curves else ''}<a class="btn{'' if curves else ' primary'}" href="#replays">3D 리플레이</a></div>
     </div>{hero_shot}
   </header>
-{build_results(curves) if curves else ''}
+{build_results(curves, axis) if curves else ''}
   <section id="replays" class="wrap">
     <div class="sec-head">
       <div class="eyebrow">3D 리플레이</div>
       <h2>포획 순간 다시 보기</h2>
-      <p>방식마다 대표 시행 하나를 물리 엔진이 계산한 궤적 그대로 재생한다. 시각화는 결과를 바꾸지 않는다.</p>
+      <p>{replay_note}</p>
     </div>
-    <div class="grid3">
+    <div class="grid4">
 {"".join(cards)}
     </div>
   </section>
@@ -481,8 +627,8 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
         <h3>보는 법</h3>
         마우스 드래그로 회전, 휠로 확대·축소, <kbd>Shift</kbd> 드래그로 이동한다.
         <kbd>Space</kbd> 재생·정지, <kbd>1</kbd>~<kbd>4</kbd> 카메라 추적 대상,
-        <kbd>P</kbd> 발표 모드(핵심 수치만 크게), <kbd>O</kbd> 카메라 자동 회전.
-        그물이 솜뭉치처럼 보이면 아래 "질점" 을 꺼서 스프링 선만 남긴다.
+        <kbd>P</kbd> 발표 모드(핵심 수치만 크게), <kbd>O</kbd> 카메라 자동 회전, <kbd>N</kbd> 그물 질점 표시.
+        질점은 실제 충돌 반경으로 그려 그물이 솜뭉치처럼 보이므로, 발표 모드에서는 자동으로 숨겨 그물 선만 남긴다.
       </div>
       <div>
         <h3>성공 판정</h3>
@@ -583,7 +729,8 @@ def capture_thumbs(out_dir: str, runs: List[Dict], size=(1280, 720)) -> None:
     try:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as profile:
             for r in runs:
-                url = f"http://127.0.0.1:{port}/runs/{r['name']}.html?clean&t={thumb_time(r['data']):.2f}"
+                # nodes=0.3: 그물·테더 질점을 줄여 그물 모양이 보이게 한다 (논문 그림과 같은 방식)
+                url = f"http://127.0.0.1:{port}/runs/{r['name']}.html?clean&nodes=0.3&t={thumb_time(r['data']):.2f}"
                 png = os.path.join(thumbs_dir, r["name"] + ".png")
                 subprocess.run([browser, "--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
                                 "--hide-scrollbars", f"--window-size={size[0]},{size[1]}", "--virtual-time-budget=8000",
@@ -610,7 +757,8 @@ def find_thumbs(out_dir: str, runs: List[Dict]) -> Dict[str, str]:
 # =============================================================================
 # 빌드
 # =============================================================================
-def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs: bool = False) -> List[Dict]:
+def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs: bool = False,
+          standalone: Optional[str] = None, site_url: str = SITE_URL) -> List[Dict]:
     here = os.path.dirname(os.path.abspath(__file__))
     template = open(os.path.join(here, "viewer_template.html"), encoding="utf-8").read()
     for sub in ("runs", "data", "assets"):
@@ -635,7 +783,9 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
         runs.append({"name": name, "data": data, "source": path})
         print(f"  {name:32s} <- {os.path.basename(path)}")
 
-    runs.sort(key=lambda r: (METHOD_ORDER.index(run_kind(r)[0]) if run_kind(r)[0] in METHOD_ORDER else 9, r["name"]))
+    # 대상 → 방식 순. 같은 대상의 방식들이 나란히 놓여 결과가 갈리는 것을 바로 비교할 수 있다
+    order = lambda seq, x: seq.index(x) if x in seq else 9
+    runs.sort(key=lambda r: (order(TARGET_ORDER, run_kind(r)[1]), order(METHOD_ORDER, run_kind(r)[0]), r["name"]))
 
     # 뷰어 위쪽의 시나리오 이동 막대. 같은 방식·대상이 둘 이상이면 회전 속도로 구분한다
     kinds = [run_kind(r) for r in runs]
@@ -646,17 +796,42 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
             label += f" {float(r['data'].get('result', {}).get('spin_deg_s', 0)):g}°/s"
         nav_runs.append({"name": r["name"], "href": f"{r['name']}.html", "label": label,
                          "color": METHOD_COLORS.get(m, "#5fc9ff")})
-    for r, (m, t) in zip(runs, kinds):
-        nav = {"home": "../index.html", "runs": [dict(n, current=n["name"] == r["name"]) for n in nav_runs]}
-        title = f"{METHOD_LABELS.get(m, m)} 포획 · {TARGET_LABELS.get(t, t)} · 3D 리플레이"
-        with open(os.path.join(out_dir, "runs", f"{r['name']}.html"), "w", encoding="utf-8") as f:
-            f.write(build_viewer_page(template, f"../data/{r['name']}.js", nav, title))
+    titles = {r["name"]: f"{METHOD_LABELS.get(m, m)} 포획 · {TARGET_LABELS.get(t, t)} · 3D 리플레이"
+              for r, (m, t) in zip(runs, kinds)}
+    nav_for = lambda name, home: {"home": home, "runs": [dict(n, current=n["name"] == name) for n in nav_runs]}
 
+    def write_viewers(found: Dict[str, str]) -> None:
+        for r in runs:
+            name, res = r["name"], r["data"].get("result", {})
+            desc = (f"회전 {float(res.get('spin_deg_s', 0)):g} deg/s · "
+                    + ("포획 성공" if res.get("success") else "포획 실패") + " · 물리 시뮬레이션 3D 리플레이")
+            head = head_meta(titles[name], desc, f"{site_url}runs/{name}.html",
+                             site_url + found[name] if name in found else None)
+            with open(os.path.join(out_dir, "runs", f"{name}.html"), "w", encoding="utf-8") as f:
+                f.write(build_viewer_page(template, f"../data/{name}.js", nav_for(name, "../index.html"), titles[name], head))
+
+    write_viewers(find_thumbs(out_dir, runs))
     if thumbs:
-        capture_thumbs(out_dir, runs)
+        capture_thumbs(out_dir, runs)               # 방금 쓴 뷰어 페이지를 열어 찍는다
+        write_viewers(find_thumbs(out_dir, runs))   # 썸네일이 생겼으니 링크 미리보기 그림을 넣어 다시 쓴다
+    found = find_thumbs(out_dir, runs)
     curves = load_summary(summary or os.path.join(here, "results", "results_summary.csv"))
+    axis = load_axis(os.path.join(here, "results_axis"))
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(build_index(runs, curves, find_thumbs(out_dir, runs)))
+        f.write(build_index(runs, curves, found, axis, site_url))
+
+    # 오프라인 발표 대비용 단독 HTML. 첫 화면이 없으므로 이동 막대에는 시나리오끼리만 잇는다
+    if standalone:
+        os.makedirs(standalone, exist_ok=True)
+        three_js = open(os.path.join(here, three), encoding="utf-8").read().replace("</script", "<\\/script")
+        with open(os.path.join(here, earth), "rb") as f:
+            earth_uri = "data:image/jpeg;base64," + base64.b64encode(f.read()).decode("ascii")
+        for r in runs:
+            path = os.path.join(standalone, f"{r['name']}.html")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(build_standalone_page(template, r["data"], three_js, earth_uri, nav_for(r["name"], None),
+                                              titles[r["name"]]))
+            print(f"  오프라인 {path} ({os.path.getsize(path) / 1e6:.1f} MB)")
     with open(os.path.join(out_dir, "vercel.json"), "w", encoding="utf-8") as f:
         f.write(VERCEL_JSON)
     return runs
@@ -674,6 +849,9 @@ def main(argv=None):
     ap.add_argument("--summary", default=None,
                     help="핵심 결과 절에 쓸 격자 실험 요약 CSV. 기본값은 results/results_summary.csv")
     ap.add_argument("--thumbs", action="store_true", help="헤드리스 Edge/Chrome 으로 리플레이 썸네일을 새로 찍는다")
+    ap.add_argument("--standalone", default=None, metavar="DIR",
+                    help="인터넷 없이 열리는 단독 뷰어 HTML 을 DIR 에 쓴다 (예: demo). 입력과 같은 폴더여도 된다")
+    ap.add_argument("--site-url", default=SITE_URL, help="배포 주소. 링크 미리보기 그림의 절대 주소에 쓴다")
     ap.add_argument("--serve", action="store_true", help="빌드 후 로컬 서버로 확인")
     ap.add_argument("--port", type=int, default=8000)
     args = ap.parse_args(argv)
@@ -682,7 +860,8 @@ def main(argv=None):
     if not inputs:
         raise SystemExit("입력이 없다. `--viewer` 로 리플레이를 먼저 만들거나 --inputs 로 지정할 것.")
     print(f"입력 {len(inputs)}개")
-    runs = build(inputs, args.out, args.summary, args.thumbs)
+    runs = build(inputs, args.out, args.summary, args.thumbs, args.standalone,
+                 args.site_url if args.site_url.endswith("/") else args.site_url + "/")
     size = total_size(args.out)
     print(f"\n사이트 {len(runs)}개 시행, 총 {size / 1e6:.1f} MB -> {os.path.abspath(args.out)}")
     print("배포:  site/ 를 커밋해 main 에 푸시하면 GitHub Pages 로 올라간다")

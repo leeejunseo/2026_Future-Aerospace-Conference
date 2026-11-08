@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2731%27%20fill%3D%27%2305070d%27%2F%3E%3Cellipse%20cx%3D%2732%27%20cy%3D%2732%27%20rx%3D%2725%27%20ry%3D%279%27%20fill%3D%27none%27%20stroke%3D%27%235fc9ff%27%20stroke-width%3D%273.5%27%20transform%3D%27rotate%28-28%2032%2032%29%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%278%27%20fill%3D%27%2386e07f%27%2F%3E%3C%2Fsvg%3E">
 </head>
-<body>
-<title>Debris Capture Replay</title>
+<body style="margin:0">
+<title>작살 포획 · 중형 500 kg · 3D 리플레이</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root {
     --bg: #05070d;
@@ -22,7 +24,7 @@
     --bad: #ff6b6b;
     --net: #86e07f;
     --tether: #ffb457;
-    --font: "IBM Plex Sans", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    --font: "Pretendard Variable", Pretendard, "IBM Plex Sans", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
     --mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
     color-scheme: dark;
   }
@@ -36,8 +38,8 @@
 
   /* ---------- 공통 패널 */
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-  .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--text); background: rgba(255,255,255,0.03); }
+  .eyebrow { font-size: 11px; letter-spacing: 0.06em; color: var(--muted); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 11.5px; font-variant-numeric: tabular-nums; color: var(--text); background: rgba(255,255,255,0.03); }
   .chip.good { border-color: rgba(74,212,148,0.5); color: var(--good); }
   .chip.bad { border-color: rgba(255,107,107,0.5); color: var(--bad); }
   .chip.warn { border-color: rgba(244,184,74,0.5); color: var(--warn); }
@@ -52,9 +54,9 @@
 
   /* ---------- 상단 임무 헤더 */
   .mission { position: absolute; top: 14px; left: 14px; padding: 12px 14px; max-width: min(420px, calc(100% - 28px)); display: grid; gap: 6px; }
-  .mission h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+  .mission h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
   .mission .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .mission .verdict { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-family: var(--mono); font-size: 12px; }
+  .mission .verdict { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .verdict .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 10px currentColor; }
   .verdict.ok .dot { background: var(--good); color: var(--good); }
   .verdict.ok { color: var(--good); }
@@ -64,19 +66,19 @@
   .telemetry { position: absolute; top: 14px; right: 14px; width: 300px; max-height: calc(100% - 110px); overflow: auto; padding: 12px; display: grid; gap: 12px; }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .tile { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,0.02); display: grid; gap: 2px; }
-  .tile .k { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .tile .k { font-size: 11px; color: var(--muted); }
   .tile .v { font-family: var(--mono); font-size: 18px; font-variant-numeric: tabular-nums; line-height: 1.1; }
   .tile .v small { font-size: 11px; color: var(--muted); margin-left: 3px; }
   .tile.wide { grid-column: span 2; }
   .tile .v.good { color: var(--good); } .tile .v.warn { color: var(--warn); } .tile .v.bad { color: var(--bad); }
   .chartbox { display: grid; gap: 6px; }
   .chartbox canvas { width: 100%; height: 120px; display: block; border-radius: 6px; }
-  .legend { display: flex; gap: 12px; font-family: var(--mono); font-size: 10px; color: var(--muted); flex-wrap: wrap; }
+  .legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
   .legend i { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 4px; background: var(--accent); }
-  .events { display: grid; gap: 4px; font-family: var(--mono); font-size: 11px; }
+  .events { display: grid; gap: 4px; font-size: 12px; }
   .events div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
   .events div:last-child { border-bottom: 0; }
-  .events .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .events .t { color: var(--muted); font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; }
 
   /* ---------- 하단 재생 바 */
   .transport { position: absolute; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; display: grid; gap: 8px; }
@@ -84,7 +86,7 @@
   .timeline { position: relative; flex: 1 1 240px; height: 26px; display: flex; align-items: center; }
   .timeline input { width: 100%; margin: 0; accent-color: var(--accent); cursor: pointer; }
   .marks { position: absolute; left: 0; right: 0; top: 0; height: 6px; pointer-events: none; }
-  .marks i { position: absolute; top: 0; width: 2px; height: 6px; margin-left: -1px; background: var(--warn); border-radius: 1px; }
+  .marks i { position: absolute; top: -2px; width: 3px; height: 9px; margin-left: -1.5px; background: var(--warn); border-radius: 2px; }
   .marks i.good { background: var(--good); } .marks i.bad { background: var(--bad); } .marks i.info { background: var(--accent); }
   .time { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12px; min-width: 150px; }
   .play { width: 40px; height: 32px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
@@ -105,55 +107,106 @@
   .toast { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); padding: 6px 12px; font-family: var(--mono); font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .toast.show { opacity: 1; }
 
+  /* ---------- 화면 가장자리를 어둡게 눌러 시선을 가운데로 모은다 (캔버스 위, 패널 아래) */
+  .vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 120% 95% at 50% 45%, transparent 55%, rgba(0, 2, 8, 0.6) 100%); }
+
+  /* ---------- 다른 시나리오로 이동 (웹 배포본에서만 보인다) */
+  .sitenav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding-bottom: 8px; margin-bottom: 2px; border-bottom: 1px solid var(--line); }
+  .sitenav a { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid transparent; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 12px; }
+  .sitenav a:hover { color: var(--text); border-color: var(--line); }
+  .sitenav a.home { color: var(--accent); padding-left: 2px; margin-right: 4px; }
+  .sitenav a.cur { color: var(--text); background: rgba(255,255,255,0.06); border-color: var(--line); }
+  .sitenav i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+
+  /* ---------- 사건 알림: 재생 중 첫 접촉·감속 완료 순간을 화면 위쪽에 크게 띄운다 */
+  .callout { position: absolute; left: 50%; top: clamp(150px, 24%, 260px); transform: translate(-50%, 10px); padding: 12px 24px; text-align: center; opacity: 0; pointer-events: none; transition: opacity .35s, transform .35s; z-index: 3; }
+  .callout.show { opacity: 1; transform: translate(-50%, 0); }
+  .callout .ct { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .callout .cs { margin-top: 4px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .callout.info .ct { color: var(--accent); } .callout.good .ct { color: var(--good); } .callout.bad .ct { color: var(--bad); }
+  .callout.final.good { border-color: rgba(74,212,148,0.6); box-shadow: 0 0 48px rgba(74,212,148,0.25); }
+  .callout.final.bad { border-color: rgba(255,107,107,0.6); box-shadow: 0 0 48px rgba(255,107,107,0.25); }
+
+  /* ---------- 발표 모드: 세부 패널을 걷어내고 핵심 수치만 크게 보인다 */
+  .bighud { position: absolute; left: 14px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); padding: 14px 20px; display: none; gap: 28px; align-items: flex-end; }
+  .bighud .k { color: var(--muted); font-size: 13px; margin-bottom: 2px; }
+  .bighud .v { font-family: var(--mono); font-size: 42px; font-weight: 500; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .bighud .v small { margin-left: 4px; color: var(--muted); font-size: 15px; }
+  .bighud .v.good { color: var(--good); } .bighud .v.warn { color: var(--warn); }
+  .bighud .v.word { font-family: var(--font); font-size: 28px; font-weight: 700; }
+  .bighud .phase { max-width: 280px; font-size: 20px; font-weight: 600; line-height: 1.3; }
+  .present .bighud { display: flex; }
+  .present .telemetry, .present .transport .tools { display: none; }
+  .present .mission { max-width: min(480px, calc(100% - 28px)); padding: 16px 18px; }
+  .present .mission h1 { font-size: 28px; }
+  .present .callout .ct { font-size: 36px; }
+
   @media (max-width: 820px) {
     .telemetry { top: auto; bottom: 96px; left: 14px; right: 14px; width: auto; max-height: 190px; padding: 10px; }
     .tiles { grid-template-columns: repeat(3, 1fr); }
     .chartbox, .events, .eyebrow.ev { display: none; }
     .mission { max-width: calc(100% - 28px); }
     .time { min-width: 0; }
+    .sitenav a:not(.home):not(.cur) { display: none; }
+    .callout { top: 40%; }
+    .callout .ct, .present .callout .ct { font-size: 20px; }
+    .bighud { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); gap: 16px; padding: 10px 14px; }
+    .bighud .v { font-size: 26px; } .bighud .v.word { font-size: 20px; } .bighud .phase { font-size: 15px; }
+    .present .mission h1 { font-size: 20px; }
   }
-  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .toast, .callout { transition: none; } }
   /* 논문 그림용: 주소 뒤에 ?clean 을 붙이면 조작 패널을 모두 숨긴다 */
-  .clean .mission, .clean .telemetry, .clean .transport, .clean .toast { display: none !important; }
+  .clean .mission, .clean .telemetry, .clean .transport, .clean .toast,
+  .clean .vignette, .clean .callout, .clean .bighud { display: none !important; }
 </style>
 
 <div id="app">
-  <canvas id="gl" aria-label="3D replay of the capture"></canvas>
+  <canvas id="gl" aria-label="포획 장면 3D 리플레이"></canvas>
+  <div class="vignette"></div>
 
   <header class="mission panel">
-    <div class="eyebrow">Debris capture replay · PyBullet + LVLH</div>
+    <nav class="sitenav" id="sitenav" aria-label="시나리오 이동" hidden></nav>
+    <div class="eyebrow">회전 우주 파편 포획 · PyBullet 물리 리플레이</div>
     <h1 id="title">—</h1>
     <div class="chips" id="chips"></div>
     <div class="verdict" id="verdict"><span class="dot"></span><span id="verdictText">—</span></div>
   </header>
 
-  <aside class="telemetry panel" aria-label="telemetry">
+  <aside class="telemetry panel" aria-label="원격 측정">
     <div class="tiles">
-      <div class="tile"><div class="k">T+</div><div class="v" id="tTime">0.00<small>s</small></div></div>
-      <div class="tile"><div class="k">rel ω</div><div class="v" id="tRel">—<small>deg/s</small></div></div>
-      <div class="tile"><div class="k">target |ω|</div><div class="v" id="tW">—<small>deg/s</small></div></div>
-      <div class="tile"><div class="k">distance</div><div class="v" id="tDist">—<small>m</small></div></div>
-      <div class="tile"><div class="k">bond</div><div class="v" id="tBond">—</div></div>
-      <div class="tile"><div class="k">status</div><div class="v" id="tStatus" style="font-size:12px;line-height:1.3">—</div></div>
+      <div class="tile"><div class="k">경과 시간</div><div class="v" id="tTime">0.00<small>s</small></div></div>
+      <div class="tile"><div class="k">상대 각속도</div><div class="v" id="tRel">—<small>deg/s</small></div></div>
+      <div class="tile"><div class="k">대상 각속도</div><div class="v" id="tW">—<small>deg/s</small></div></div>
+      <div class="tile"><div class="k">거리</div><div class="v" id="tDist">—<small>m</small></div></div>
+      <div class="tile"><div class="k">결합</div><div class="v" id="tBond">—</div></div>
+      <div class="tile"><div class="k">상태</div><div class="v" id="tStatus" style="font-family:var(--font);font-size:13px;line-height:1.3">—</div></div>
     </div>
     <div class="chartbox">
-      <div class="eyebrow">rel ω vs time · threshold <span id="thrLabel">1</span> deg/s</div>
+      <div class="eyebrow">상대 각속도 추이 · 성공 기준 <span id="thrLabel">1</span> deg/s</div>
       <canvas id="chart" width="560" height="240"></canvas>
-      <div class="legend"><span><i></i>rel ω</span><span><i style="background:var(--good)"></i>bond intact</span><span><i style="background:var(--warn);height:1px"></i>threshold</span></div>
+      <div class="legend"><span><i></i>상대 각속도</span><span><i style="background:var(--good)"></i>결합 유지 구간</span><span><i style="background:var(--warn);height:1px"></i>성공 기준</span></div>
     </div>
-    <div class="eyebrow ev">Events</div>
+    <div class="eyebrow ev">주요 사건</div>
     <div class="events" id="events"></div>
   </aside>
 
+  <div class="bighud panel" id="bighud" aria-hidden="true">
+    <div><div class="k">상대 각속도</div><div class="v" id="bRel">—</div></div>
+    <div><div class="k">결합</div><div class="v word" id="bBond">—</div></div>
+    <div><div class="k">현재 단계</div><div class="phase" id="bPhase">—</div></div>
+  </div>
+  <div class="callout panel" id="callout" aria-live="polite"><div class="ct" id="cTitle"></div><div class="cs" id="cSub"></div></div>
+
   <footer class="transport panel">
     <div class="row">
-      <button class="btn play" id="play" aria-label="play / pause">▶</button>
+      <button class="btn play" id="play" aria-label="재생 / 일시정지">▶</button>
       <div class="time"><span id="tCur">T+0.00</span> / <span id="tEnd">0.00</span> s</div>
-      <div class="timeline"><div class="marks" id="marks"></div><input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="timeline"></div>
+      <div class="timeline"><div class="marks" id="marks"></div><input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="재생 위치"></div>
       <div class="seg" id="speed"></div>
+      <button class="btn" id="presentBtn" title="발표 모드 (P)">발표 모드</button>
     </div>
-    <div class="row">
-      <span class="eyebrow">camera</span>
+    <div class="row tools">
+      <span class="eyebrow">카메라</span>
       <div class="seg" id="camMode"></div>
       <div class="toggles" id="toggles"></div>
       <span class="spacer"></span>
@@ -176,6 +229,9 @@
         <tr><td>, .</td><td>한 프레임 뒤로 / 앞으로</td></tr>
         <tr><td>[ ]</td><td>재생 속도 낮춤 / 높임</td></tr>
         <tr><td>R</td><td>카메라 리셋</td></tr>
+        <tr><td>P</td><td>발표 모드 (핵심 수치만 크게)</td></tr>
+        <tr><td>O</td><td>카메라 자동 회전</td></tr>
+        <tr><td>N</td><td>그물·테더 질점 표시 (발표 모드에서는 꺼진다)</td></tr>
         <tr><td>? 또는 H</td><td>이 도움말</td></tr>
       </table>
       <div class="row"><span class="spacer"></span><button class="btn" id="helpClose">닫기</button></div>
@@ -184,6 +240,7 @@
   <div class="toast panel" id="toast"></div>
 </div>
 
+<script>window.__SITE_NAV__={"home": null, "runs": [{"name": "arm_small_10degs", "href": "arm_small_10degs.html", "label": "로봇팔 · 소형", "color": "#5fc9ff", "current": false}, {"name": "arm_medium_10degs", "href": "arm_medium_10degs.html", "label": "로봇팔 · 중형", "color": "#5fc9ff", "current": false}, {"name": "net_medium_10degs", "href": "net_medium_10degs.html", "label": "그물 · 중형", "color": "#86e07f", "current": false}, {"name": "harpoon_medium_10degs", "href": "harpoon_medium_10degs.html", "label": "작살 · 중형", "color": "#ffb457", "current": true}]};</script>
 <script>/**
  * @license
  * Copyright 2010-2021 Three.js Authors
@@ -210,36 +267,64 @@
   const THR = (S.success && S.success.rel_omega_threshold_deg_s) || 1.0;
   const T_END = F[F.length - 1].t;
   const LABEL = { arm: "로봇팔", net: "그물", harpoon: "작살", small: "소형 10 kg 큐브샛", medium: "중형 500 kg 위성", large: "대형 2000 kg 로켓 단" };
+  const SPIN_MODE = { principal: "주축 회전", precession: "세차 회전" };
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+
+  // 상태 문자열(key=value 나열)을 화면용 한국어로 바꾼다. 모르는 형식은 원문을 그대로 둔다
+  const PHASE = { preapproach: "접근 준비", approach: "접근", close: "파지 시도", grasped: "파지 완료" };
+  const HARPOON = { flying: "작살 비행 중", anchored: "작살 관통 · 고정", bounced: "작살 튕겨 나감", torn: "테더 끊어짐" };
+  function statusText(s) {
+    if (!s) return "";
+    const kv = {}; s.split(/\s+/).forEach((p) => { const i = p.indexOf("="); if (i > 0) kv[p.slice(0, i)] = p.slice(i + 1); });
+    if (kv.phase) return (PHASE[kv.phase] || kv.phase) + (+kv.lost > 0 ? ` · 놓침 ${kv.lost}회` : "");
+    if (kv.contact_nodes != null) return `그물 접촉 질점 ${kv.contact_nodes}개` + (kv.closing === "on" ? " · 입구 조임" : "");
+    if (kv.harpoon) return HARPOON[kv.harpoon] || `작살 ${kv.harpoon}`;
+    return s;
+  }
+  const STK = ST.map(statusText);
 
   // ---------------------------------------------------------------- 헤더
   document.getElementById("title").textContent = `${LABEL[S.method] || S.method} 포획 · ${LABEL[S.target.kind] || S.target.kind}`;
   const chips = document.getElementById("chips");
   const chip = (txt, cls) => { const e = document.createElement("span"); e.className = "chip" + (cls ? " " + cls : ""); e.textContent = txt; chips.appendChild(e); };
-  chip(`spin ${(+R.spin_deg_s || 0).toFixed(0)} deg/s`); chip(R.spin_mode || "principal"); chip(`seed ${R.seed ?? 0}`);
-  chip(`${S.orbit && S.orbit.enabled ? "LVLH " + S.orbit.altitude_km + " km" : "no orbit"}`);
-  if (R.impulse != null) chip(`impulse ${(+R.impulse).toFixed(2)} N·s`);
-  if (R.servicer_attitude_error != null) chip(`att err ${(+R.servicer_attitude_error).toFixed(1)}°`);
+  chip(`회전 ${(+R.spin_deg_s || 0).toFixed(0)} deg/s`); chip(SPIN_MODE[R.spin_mode] || R.spin_mode || "주축 회전"); chip(`시드 ${R.seed ?? 0}`);
+  chip(`${S.orbit && S.orbit.enabled ? "고도 " + S.orbit.altitude_km + " km 궤도" : "궤도 없음"}`);
+  if (R.impulse != null) chip(`충격량 ${(+R.impulse).toFixed(2)} N·s`);
+  if (R.servicer_attitude_error != null) chip(`서비서 자세 변화 ${(+R.servicer_attitude_error).toFixed(1)}°`);
   const verdict = document.getElementById("verdict");
   verdict.classList.add(R.success ? "ok" : "fail");
-  document.getElementById("verdictText").textContent = R.success
-    ? `CAPTURE SUCCESS · capture time ${(+R.capture_time).toFixed(2)} s`
-    : `CAPTURE FAILED · ${R.notes || (R.bond_intact_final ? "rel ω not damped within time" : "bond not established / lost")}`;
+  const VERDICT = R.success
+    ? `포획 성공 · 감속 시간 ${(+R.capture_time).toFixed(2)} s`
+    : `포획 실패 · ${R.notes || (R.bond_intact_final ? "시간 안에 감속하지 못함" : "결합이 형성되지 않거나 끊김")}`;
+  document.getElementById("verdictText").textContent = VERDICT;
   document.getElementById("thrLabel").textContent = THR;
 
+  // build_site.py 로 만든 페이지는 다른 시나리오로 가는 길을 window.__SITE_NAV__ 로 넣어 준다.
+  // 오프라인용 단독 HTML 은 첫 화면이 없어 home 이 빠진다. capture_sim.py 로 바로 만든 HTML 에는 둘 다 없다
+  const NAV = window.__SITE_NAV__;
+  if (NAV && NAV.runs) {
+    const nav = document.getElementById("sitenav");
+    nav.innerHTML = (NAV.home ? `<a class="home" href="${NAV.home}">← 전체 결과</a>` : "") +
+      NAV.runs.map((r) => `<a href="${r.href}" class="${r.current ? "cur" : ""}" style="--c:${r.color}"${r.current ? ' aria-current="page"' : ""}><i></i>${r.label}</a>`).join("");
+    nav.hidden = false;
+  }
+
   // ---------------------------------------------------------------- 이벤트
+  // call 이 있는 사건은 재생 중 그 시각을 지날 때 화면에 크게 알린다.
+  // 결합 형성·끊김은 그물에서 수십 ms 간격으로 오가므로 목록에만 두고 알리지 않는다
   const events = [];
-  if (R.first_contact_time != null) events.push({ t: +R.first_contact_time, name: "first contact", cls: "info" });
-  if (R.bond_established_time != null) events.push({ t: +R.bond_established_time, name: "bond established", cls: "good" });
-  if (R.bond_lost_time != null) events.push({ t: +R.bond_lost_time, name: "bond lost", cls: "bad" });
-  if (R.success && R.capture_time != null && R.first_contact_time != null) events.push({ t: +R.first_contact_time + +R.capture_time, name: "rel ω < threshold", cls: "good" });
+  if (R.first_contact_time != null) events.push({ t: +R.first_contact_time, name: "첫 접촉", cls: "info", call: S.method === "harpoon" ? "작살 관통" : "첫 접촉" });
+  if (R.bond_established_time != null) events.push({ t: +R.bond_established_time, name: "결합 형성", cls: "good" });
+  if (R.bond_lost_time != null) events.push({ t: +R.bond_lost_time, name: "결합 끊김", cls: "bad" });
+  if (R.closing_started != null) events.push({ t: +R.closing_started, name: "그물 입구 조임", cls: "info", call: "그물 입구 조임" });
+  if (R.success && R.capture_time != null && R.first_contact_time != null) events.push({ t: +R.first_contact_time + +R.capture_time, name: `상대 각속도 ${THR} deg/s 이하`, cls: "good", call: "감속 완료" });
   events.sort((a, b) => a.t - b.t);
   const evBox = document.getElementById("events"), marks = document.getElementById("marks");
   for (const e of events) {
     evBox.insertAdjacentHTML("beforeend", `<div><span>${e.name}</span><span class="t">T+${e.t.toFixed(2)} s</span></div>`);
     marks.insertAdjacentHTML("beforeend", `<i class="${e.cls}" style="left:${(100 * e.t / T_END).toFixed(2)}%" title="${e.name}"></i>`);
   }
-  if (!events.length) evBox.innerHTML = '<div><span>no contact recorded</span></div>';
+  if (!events.length) evBox.innerHTML = '<div><span>기록된 접촉 없음</span></div>';
 
   // ---------------------------------------------------------------- 렌더러 / 장면
   const canvas = document.getElementById("gl");
@@ -260,18 +345,39 @@
   const fill = new THREE.DirectionalLight(0x93a6c4, 0.5); fill.position.copy(sunDir.clone().multiplyScalar(-300).setZ(120)); scene.add(fill);
   scene.add(new THREE.HemisphereLight(0x8fa6cc, 0x141a26, 0.75));
 
-  // 별
+  // 별: 크기 하나로 그리면 평평해 보여서 어두운 다수 · 밝은 소수 · 은하수 띠의 세 층으로 나눈다
   {
-    const N = 5000, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     let seed = 42; const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
-    for (let i = 0; i < N; i++) {
-      const u = rnd() * 2 - 1, ph = rnd() * Math.PI * 2, r = Math.sqrt(1 - u * u);
-      pos.set([r * Math.cos(ph) * 9000, r * Math.sin(ph) * 9000, u * 9000], i * 3);
-      const b = 0.35 + 0.65 * Math.pow(rnd(), 3), tint = rnd();
-      col.set([b, b * (0.92 + 0.08 * tint), b * (0.85 + 0.15 * tint)], i * 3);
-    }
-    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.BufferAttribute(col, 3));
-    scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.95 })));
+    const band = V3(0.32, -0.52, 0.79).normalize();   // 은하수 띠가 놓이는 대원의 법선
+    const layer = (N, size, opacity, bright, squeeze, tintB) => {
+      const pos = new Float32Array(N * 3), col = new Float32Array(N * 3), v = V3(0, 0, 0);
+      for (let i = 0; i < N; i++) {
+        const u = rnd() * 2 - 1, ph = rnd() * Math.PI * 2, r = Math.sqrt(1 - u * u);
+        v.set(r * Math.cos(ph), r * Math.sin(ph), u);
+        if (squeeze) v.addScaledVector(band, -v.dot(band) * squeeze).normalize();   // 띠 쪽으로 몰아 넣는다
+        pos.set([v.x * 9000, v.y * 9000, v.z * 9000], i * 3);
+        const b = bright(rnd()), tint = rnd();
+        col.set([b * (0.9 + 0.1 * tint), b * (0.93 + 0.07 * tint), b * (tintB + (1 - tintB) * tint)], i * 3);
+      }
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+      scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size, sizeAttenuation: false, vertexColors: true, transparent: true, opacity, depthWrite: false })));
+    };
+    layer(5200, 1.3, 0.85, (x) => 0.3 + 0.55 * Math.pow(x, 3), 0, 0.85);
+    layer(260, 2.6, 1.0, (x) => 0.75 + 0.25 * x, 0, 0.8);
+    layer(9000, 1.0, 0.45, (x) => 0.25 + 0.35 * x, 0.88, 1.0);
+  }
+
+  // 태양 눈부심: 실제 태양 방향 멀리에 가산 혼합 스프라이트를 둔다. 지구 뒤로 가면 깊이 검사로 가려진다
+  {
+    const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d");
+    const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grd.addColorStop(0, "rgba(255,252,240,1)"); grd.addColorStop(0.06, "rgba(255,244,220,0.95)");
+    grd.addColorStop(0.2, "rgba(255,214,160,0.28)"); grd.addColorStop(0.5, "rgba(255,190,130,0.06)"); grd.addColorStop(1, "rgba(255,180,120,0)");
+    g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+    const glare = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
+    glare.position.copy(sunDir.clone().multiplyScalar(8000)); glare.scale.set(1500, 1500, 1);
+    scene.add(glare);
   }
 
   // 지구 (실제 고도에서 보이는 각크기 유지)
@@ -369,8 +475,11 @@
   // 그물 / 테더 (질점 + 스프링 선)
   function makeNodeSet(n, radius, color, si, sj, anchorsCount) {
     // 질점은 실제 충돌 반경 그대로 그리되 반투명으로 — 대상이 가려지지 않으면서 모델의 실제 크기를 속이지 않는다
+    // ?nodes=0.3 처럼 주면 그 배율로 줄여 그린다 (논문 그림에서 그물 선이 보이게 할 때만 쓴다)
+    const nodeScale = parseFloat(new URLSearchParams(location.search).get("nodes"));
+    const r = radius * (nodeScale >= 0 ? nodeScale : 1);
     const inst = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(radius, 14, 10),
+      new THREE.SphereGeometry(Math.max(r, 1e-4), 14, 10),
       new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.05, emissive: color, emissiveIntensity: 0.25,
                                        transparent: true, opacity: 0.42, depthWrite: false }), n);
     scene.add(inst);
@@ -468,12 +577,13 @@
     graspRing.position.copy(gp); graspRing.quaternion.setFromUnitVectors(V3(0, 0, 1), gn);
     trail.geometry.setDrawRange(0, idx + 1);
     cur.t = t; cur.rel = A.rel + (B.rel - A.rel) * u; cur.bond = A.bond; cur.w = THREE.MathUtils.radToDeg(w.length());
-    cur.dist = target.position.distanceTo(servicer.position); cur.status = ST[A.st] || "";
+    cur.dist = target.position.distanceTo(servicer.position); cur.status = STK[A.st] || "";
   }
 
   // ---------------------------------------------------------------- 카메라
   const camState = { mode: "mid", yaw: 0.65, pitch: 0.28, dist: 1, offset: V3(0, 0, 0), free: V3(0, 0, 0) };
-  const d0 = Math.max(4, 1.7 * V3(...F[0].tgt.slice(0, 3)).distanceTo(V3(...F[0].svc.slice(0, 3))));
+  const sep0 = V3(...F[0].tgt.slice(0, 3)).distanceTo(V3(...F[0].svc.slice(0, 3)));
+  const d0 = Math.max(4, 1.7 * sep0);
   camState.dist = d0;
   function anchor() {
     if (camState.mode === "target") return target.position.clone();
@@ -483,8 +593,10 @@
   }
   function updateCamera() {
     const a = anchor().add(camState.offset);
-    const cp = Math.cos(camState.pitch), sp = Math.sin(camState.pitch);
-    camera.position.set(a.x + camState.dist * cp * Math.cos(camState.yaw), a.y + camState.dist * cp * Math.sin(camState.yaw), a.z + camState.dist * sp);
+    // 중점 모드에서 두 위성이 처음보다 멀어지면(놓친 뒤 떠내려가는 실패 시행) 그 비율만큼 물러나 둘 다 화면에 남긴다
+    const fit = camState.mode === "mid" ? Math.max(1, target.position.distanceTo(servicer.position) / Math.max(sep0, 1e-6)) : 1;
+    const d = camState.dist * fit, cp = Math.cos(camState.pitch), sp = Math.sin(camState.pitch);
+    camera.position.set(a.x + d * cp * Math.cos(camState.yaw), a.y + d * cp * Math.sin(camState.yaw), a.z + d * sp);
     camera.lookAt(a);
   }
   function setMode(m) {
@@ -517,29 +629,60 @@
     play: document.getElementById("play"), scrub: document.getElementById("scrub"), tCur: document.getElementById("tCur"), tEnd: document.getElementById("tEnd"),
     tTime: document.getElementById("tTime"), tRel: document.getElementById("tRel"), tW: document.getElementById("tW"), tDist: document.getElementById("tDist"), tBond: document.getElementById("tBond"), tStatus: document.getElementById("tStatus"),
     chart: document.getElementById("chart"), toast: document.getElementById("toast"),
+    bRel: document.getElementById("bRel"), bBond: document.getElementById("bBond"), bPhase: document.getElementById("bPhase"),
+    present: document.getElementById("presentBtn"),
   };
   ui.tEnd.textContent = T_END.toFixed(2);
   const play = { on: false, t: 0, speed: 1 };
-  const SPEEDS = [0.25, 0.5, 1, 2, 4];
+  // 작살처럼 백 초가 넘는 시행은 발표 중에 1배속으로 다 볼 수 없으므로 빠른 배속을 더 둔다
+  const SPEEDS = T_END > 30 ? [0.25, 0.5, 1, 2, 4, 8, 16] : [0.25, 0.5, 1, 2, 4];
   const speedBox = document.getElementById("speed");
   SPEEDS.forEach((s) => { const b = document.createElement("button"); b.className = "btn" + (s === 1 ? " active" : ""); b.textContent = s + "×"; b.dataset.speed = s; b.addEventListener("click", () => setSpeed(s)); speedBox.appendChild(b); });
   function setSpeed(s) { play.speed = s; speedBox.querySelectorAll(".btn").forEach((b) => b.classList.toggle("active", +b.dataset.speed === s)); }
   const camBox = document.getElementById("camMode");
   [["mid", "중점"], ["target", "대상"], ["servicer", "서비서"], ["free", "자유"]].forEach(([m, l]) => { const b = document.createElement("button"); b.className = "btn" + (m === "mid" ? " active" : ""); b.textContent = l; b.dataset.mode = m; b.addEventListener("click", () => setMode(m)); camBox.appendChild(b); });
-  const show = { springs: true, axis: true, marker: true, trail: false, earth: true };
+  const show = { springs: true, nodes: true, axis: true, marker: true, trail: false, earth: true, orbit: false };
   const togBox = document.getElementById("toggles");
-  [["springs", "스프링"], ["axis", "회전축"], ["marker", "파지점"], ["trail", "궤적"], ["earth", "지구"]].forEach(([k, l]) => {
+  // 질점 구는 실제 충돌 반경이라 그물이 솜뭉치처럼 보인다. 그물 모양을 설명할 때는 꺼서 스프링 선만 남긴다
+  [["springs", "스프링"], ...(net || tether ? [["nodes", "질점"]] : []), ["axis", "회전축"], ["marker", "파지점"], ["trail", "궤적"], ["earth", "지구"], ["orbit", "자동 회전"]].forEach(([k, l]) => {
     const id = "tog_" + k; togBox.insertAdjacentHTML("beforeend", `<label for="${id}"><input type="checkbox" id="${id}" ${show[k] ? "checked" : ""}>${l}</label>`);
     document.getElementById(id).addEventListener("change", (e) => { show[k] = e.target.checked; applyToggles(); });
   });
   function applyToggles() {
     if (net && net.lines) net.lines.visible = show.springs; if (tether && tether.lines) tether.lines.visible = show.springs;
+    if (net) net.inst.visible = show.nodes; if (tether) tether.inst.visible = show.nodes;
     axisLine.visible = show.axis; graspLine.visible = graspRing.visible = show.marker; trail.visible = show.trail; earthGroup.visible = show.earth;
   }
   applyToggles();
+  function setToggle(k, v) { show[k] = v; const el = document.getElementById("tog_" + k); if (el) el.checked = v; applyToggles(); }
   function togglePlay(force) { play.on = force == null ? !play.on : force; if (play.on && play.t >= T_END - 1e-6) play.t = 0; ui.play.textContent = play.on ? "❚❚" : "▶"; }
   ui.play.addEventListener("click", () => togglePlay());
-  ui.scrub.addEventListener("input", () => { play.t = (+ui.scrub.value / 1000) * T_END; togglePlay(false); });
+  ui.scrub.addEventListener("input", () => { play.t = (+ui.scrub.value / 1000) * T_END; togglePlay(false); clearCallouts(); });
+
+  // 발표 모드: 오른쪽 패널과 카메라 줄을 숨기고 핵심 수치를 왼쪽 아래에 크게 띄운다.
+  // 질점 구도 숨겨 그물·테더가 선으로 보이게 하고, 발표 모드를 끄면 원래 상태로 돌린다
+  let nodesBeforePresent = null;
+  function setPresent(on) {
+    if (on === app.classList.contains("present")) return;
+    app.classList.toggle("present", on); ui.present.classList.toggle("active", on);
+    if (net || tether) {
+      if (on) { nodesBeforePresent = show.nodes; setToggle("nodes", false); }
+      else if (nodesBeforePresent != null) setToggle("nodes", nodesBeforePresent);
+    }
+    resize();
+  }
+  ui.present.addEventListener("click", () => setPresent(!app.classList.contains("present")));
+
+  // 사건 알림. 짧은 간격으로 겹치면 차례로 하나씩 보여 준다
+  const co = { el: document.getElementById("callout"), title: document.getElementById("cTitle"), sub: document.getElementById("cSub"), q: [], timer: 0, busy: false };
+  function pushCallout(title, sub, cls, hold) { co.q.push({ title, sub, cls, hold: hold || 1900 }); if (!co.busy) nextCallout(); }
+  function nextCallout() {
+    const c = co.q.shift(); if (!c) { co.busy = false; return; }
+    co.busy = true; co.title.textContent = c.title; co.sub.textContent = c.sub;
+    co.el.className = "callout panel show " + c.cls;
+    co.timer = setTimeout(() => { co.el.classList.remove("show"); co.timer = setTimeout(nextCallout, 380); }, c.hold);
+  }
+  function clearCallouts() { co.q.length = 0; clearTimeout(co.timer); co.busy = false; co.el.classList.remove("show"); }
   document.getElementById("shot").addEventListener("click", () => {
     renderer.render(scene, camera);
     const a = document.createElement("a"); a.href = renderer.domElement.toDataURL("image/png"); a.download = `capture_${S.method}_${S.target.kind}_${Math.round(R.spin_deg_s || 0)}deg_T${play.t.toFixed(2)}.png`; a.click();
@@ -563,6 +706,9 @@
     else if (k === "," || k === ".") { togglePlay(false); const step = 1 / (DATA.fps || 30); play.t = Math.max(0, Math.min(T_END, play.t + (k === "." ? step : -step))); }
     else if (k === "[" || k === "]") { const i = SPEEDS.indexOf(play.speed); setSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, i + (k === "]" ? 1 : -1)))]); }
     else if (k === "r" || k === "R") resetCamera();
+    else if (k === "p" || k === "P") setPresent(!app.classList.contains("present"));
+    else if (k === "o" || k === "O") setToggle("orbit", !show.orbit);
+    else if ((k === "n" || k === "N") && (net || tether)) setToggle("nodes", !show.nodes);
     else if (k === "?" || k === "h" || k === "H") help.hidden = !help.hidden;
     else return;
     if (k !== " ") e.preventDefault();
@@ -622,9 +768,13 @@
     ui.tRel.innerHTML = cur.rel.toFixed(2) + "<small>deg/s</small>"; ui.tRel.className = "v " + (cur.rel <= THR ? "good" : cur.rel <= 5 * THR ? "warn" : "");
     ui.tW.innerHTML = cur.w.toFixed(2) + "<small>deg/s</small>";
     ui.tDist.innerHTML = cur.dist.toFixed(2) + "<small>m</small>";
-    ui.tBond.textContent = cur.bond ? "YES" : "no"; ui.tBond.className = "v " + (cur.bond ? "good" : "");
+    ui.tBond.textContent = cur.bond ? "유지" : "없음"; ui.tBond.className = "v " + (cur.bond ? "good" : "");
     ui.tStatus.textContent = cur.status || "—";
-    drawChart();
+    if (app.classList.contains("present")) {
+      ui.bRel.innerHTML = ui.tRel.innerHTML; ui.bRel.className = ui.tRel.className;
+      ui.bBond.textContent = ui.tBond.textContent; ui.bBond.className = "v word " + (cur.bond ? "good" : "");
+      ui.bPhase.textContent = cur.status || "—";
+    } else drawChart();
   }
 
   // ---------------------------------------------------------------- 루프
@@ -637,7 +787,12 @@
   let last = performance.now(), hudAcc = 0;
   function loop(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (play.on) { play.t += dt * play.speed; if (play.t >= T_END) { play.t = T_END; togglePlay(false); } }
+    if (play.on) {
+      const t0 = play.t; play.t += dt * play.speed;
+      for (const e of events) if (e.call && t0 < e.t && e.t <= play.t) pushCallout(e.call, `T+${e.t.toFixed(2)} s`, e.cls);
+      if (play.t >= T_END) { play.t = T_END; togglePlay(false); pushCallout(R.success ? "포획 성공" : "포획 실패", VERDICT.replace(/^포획 (성공|실패) · /, ""), "final " + (R.success ? "good" : "bad"), 4200); }
+    }
+    if (show.orbit && !drag) camState.yaw += dt * 0.08;
     applyTime(play.t);
     updateCamera();
     renderer.render(scene, camera);
@@ -646,8 +801,10 @@
   }
   // 주소 매개변수: ?clean 은 패널을 숨기고, ?t=초 는 그 시각에서 멈춘다 (논문 그림 캡처용).
   //   예) runs/net_medium_10degs.html?clean&t=40
+  //   ?present 는 발표 모드로 연다.
   const QS = new URLSearchParams(location.search);
   if (QS.has("clean")) app.classList.add("clean");
+  if (QS.has("present")) setPresent(true);
   const startT = QS.has("t") ? Math.max(0, Math.min(T_END, parseFloat(QS.get("t")) || 0)) : 0;
   play.t = startT;
   applyTime(startT); updateCamera(); updateHUD();

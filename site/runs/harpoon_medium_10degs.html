@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2731%27%20fill%3D%27%2305070d%27%2F%3E%3Cellipse%20cx%3D%2732%27%20cy%3D%2732%27%20rx%3D%2725%27%20ry%3D%279%27%20fill%3D%27none%27%20stroke%3D%27%235fc9ff%27%20stroke-width%3D%273.5%27%20transform%3D%27rotate%28-28%2032%2032%29%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%278%27%20fill%3D%27%2386e07f%27%2F%3E%3C%2Fsvg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="작살 포획 · 중형 500 kg · 3D 리플레이">
+<meta property="og:description" content="회전 10 deg/s · 포획 성공 · 물리 시뮬레이션 3D 리플레이">
+<meta property="og:url" content="https://leeejunseo.github.io/2026_Future-Aerospace-Conference/runs/harpoon_medium_10degs.html">
+<meta property="og:image" content="https://leeejunseo.github.io/2026_Future-Aerospace-Conference/assets/thumbs/harpoon_medium_10degs.jpg">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 <body style="margin:0">
 <title>작살 포획 · 중형 500 kg · 3D 리플레이</title>
@@ -230,6 +237,7 @@
         <tr><td>R</td><td>카메라 리셋</td></tr>
         <tr><td>P</td><td>발표 모드 (핵심 수치만 크게)</td></tr>
         <tr><td>O</td><td>카메라 자동 회전</td></tr>
+        <tr><td>N</td><td>그물·테더 질점 표시 (발표 모드에서는 꺼진다)</td></tr>
         <tr><td>? 또는 H</td><td>이 도움말</td></tr>
       </table>
       <div class="row"><span class="spacer"></span><button class="btn" id="helpClose">닫기</button></div>
@@ -238,7 +246,7 @@
   <div class="toast panel" id="toast"></div>
 </div>
 
-<script>window.__SITE_NAV__={"home": "../index.html", "runs": [{"name": "arm_small_10degs", "href": "arm_small_10degs.html", "label": "로봇팔 · 소형", "color": "#5fc9ff", "current": false}, {"name": "net_medium_10degs", "href": "net_medium_10degs.html", "label": "그물 · 중형", "color": "#86e07f", "current": false}, {"name": "harpoon_medium_10degs", "href": "harpoon_medium_10degs.html", "label": "작살 · 중형", "color": "#ffb457", "current": true}]};</script>
+<script>window.__SITE_NAV__={"home": "../index.html", "runs": [{"name": "arm_small_10degs", "href": "arm_small_10degs.html", "label": "로봇팔 · 소형", "color": "#5fc9ff", "current": false}, {"name": "arm_medium_10degs", "href": "arm_medium_10degs.html", "label": "로봇팔 · 중형", "color": "#5fc9ff", "current": false}, {"name": "net_medium_10degs", "href": "net_medium_10degs.html", "label": "그물 · 중형", "color": "#86e07f", "current": false}, {"name": "harpoon_medium_10degs", "href": "harpoon_medium_10degs.html", "label": "작살 · 중형", "color": "#ffb457", "current": true}]};</script>
 <script src="../data/harpoon_medium_10degs.js"></script>
 <script src="../assets/three.min.js"></script>
 <script>
@@ -292,11 +300,12 @@
   document.getElementById("verdictText").textContent = VERDICT;
   document.getElementById("thrLabel").textContent = THR;
 
-  // 웹 배포본(build_site.py)은 다른 시나리오로 가는 길을 window.__SITE_NAV__ 로 넣어 준다. 단독 HTML 에는 없다
+  // build_site.py 로 만든 페이지는 다른 시나리오로 가는 길을 window.__SITE_NAV__ 로 넣어 준다.
+  // 오프라인용 단독 HTML 은 첫 화면이 없어 home 이 빠진다. capture_sim.py 로 바로 만든 HTML 에는 둘 다 없다
   const NAV = window.__SITE_NAV__;
   if (NAV && NAV.runs) {
     const nav = document.getElementById("sitenav");
-    nav.innerHTML = `<a class="home" href="${NAV.home}">← 전체 결과</a>` +
+    nav.innerHTML = (NAV.home ? `<a class="home" href="${NAV.home}">← 전체 결과</a>` : "") +
       NAV.runs.map((r) => `<a href="${r.href}" class="${r.current ? "cur" : ""}" style="--c:${r.color}"${r.current ? ' aria-current="page"' : ""}><i></i>${r.label}</a>`).join("");
     nav.hidden = false;
   }
@@ -574,7 +583,8 @@
 
   // ---------------------------------------------------------------- 카메라
   const camState = { mode: "mid", yaw: 0.65, pitch: 0.28, dist: 1, offset: V3(0, 0, 0), free: V3(0, 0, 0) };
-  const d0 = Math.max(4, 1.7 * V3(...F[0].tgt.slice(0, 3)).distanceTo(V3(...F[0].svc.slice(0, 3))));
+  const sep0 = V3(...F[0].tgt.slice(0, 3)).distanceTo(V3(...F[0].svc.slice(0, 3)));
+  const d0 = Math.max(4, 1.7 * sep0);
   camState.dist = d0;
   function anchor() {
     if (camState.mode === "target") return target.position.clone();
@@ -584,8 +594,10 @@
   }
   function updateCamera() {
     const a = anchor().add(camState.offset);
-    const cp = Math.cos(camState.pitch), sp = Math.sin(camState.pitch);
-    camera.position.set(a.x + camState.dist * cp * Math.cos(camState.yaw), a.y + camState.dist * cp * Math.sin(camState.yaw), a.z + camState.dist * sp);
+    // 중점 모드에서 두 위성이 처음보다 멀어지면(놓친 뒤 떠내려가는 실패 시행) 그 비율만큼 물러나 둘 다 화면에 남긴다
+    const fit = camState.mode === "mid" ? Math.max(1, target.position.distanceTo(servicer.position) / Math.max(sep0, 1e-6)) : 1;
+    const d = camState.dist * fit, cp = Math.cos(camState.pitch), sp = Math.sin(camState.pitch);
+    camera.position.set(a.x + d * cp * Math.cos(camState.yaw), a.y + d * cp * Math.sin(camState.yaw), a.z + d * sp);
     camera.lookAt(a);
   }
   function setMode(m) {
@@ -648,8 +660,18 @@
   ui.play.addEventListener("click", () => togglePlay());
   ui.scrub.addEventListener("input", () => { play.t = (+ui.scrub.value / 1000) * T_END; togglePlay(false); clearCallouts(); });
 
-  // 발표 모드: 오른쪽 패널과 카메라 줄을 숨기고 핵심 수치를 왼쪽 아래에 크게 띄운다
-  function setPresent(on) { app.classList.toggle("present", on); ui.present.classList.toggle("active", on); resize(); }
+  // 발표 모드: 오른쪽 패널과 카메라 줄을 숨기고 핵심 수치를 왼쪽 아래에 크게 띄운다.
+  // 질점 구도 숨겨 그물·테더가 선으로 보이게 하고, 발표 모드를 끄면 원래 상태로 돌린다
+  let nodesBeforePresent = null;
+  function setPresent(on) {
+    if (on === app.classList.contains("present")) return;
+    app.classList.toggle("present", on); ui.present.classList.toggle("active", on);
+    if (net || tether) {
+      if (on) { nodesBeforePresent = show.nodes; setToggle("nodes", false); }
+      else if (nodesBeforePresent != null) setToggle("nodes", nodesBeforePresent);
+    }
+    resize();
+  }
   ui.present.addEventListener("click", () => setPresent(!app.classList.contains("present")));
 
   // 사건 알림. 짧은 간격으로 겹치면 차례로 하나씩 보여 준다
@@ -687,6 +709,7 @@
     else if (k === "r" || k === "R") resetCamera();
     else if (k === "p" || k === "P") setPresent(!app.classList.contains("present"));
     else if (k === "o" || k === "O") setToggle("orbit", !show.orbit);
+    else if ((k === "n" || k === "N") && (net || tether)) setToggle("nodes", !show.nodes);
     else if (k === "?" || k === "h" || k === "H") help.hidden = !help.hidden;
     else return;
     if (k !== " ") e.preventDefault();
