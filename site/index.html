@@ -3,109 +3,283 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>회전 우주 파편 포획 시뮬레이션</title>
-<meta name="description" content="로봇팔·그물·작살의 포획 순간을 물리 시뮬레이션으로 비교한 3D 리플레이">
+<title>회전 우주 파편의 포획 방식 비교</title>
+<meta name="description" content="로봇팔·그물·작살의 회전 우주 파편 포획을 물리 시뮬레이션으로 비교한 결과와 3D 리플레이">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-:root{color-scheme:dark;--bg:#05070d;--panel:rgba(13,18,30,.85);--line:#223047;--text:#e8ecf4;
---muted:#8d97ad;--accent:#5fc9ff;--good:#4ad494;--bad:#ff6b6b;
---font:"IBM Plex Sans","Malgun Gothic",system-ui,sans-serif;--mono:"IBM Plex Mono",Consolas,monospace}
+:root{color-scheme:dark;--bg:#03050b;--panel:rgba(14,20,34,.74);--line:#1d2940;--line2:#2b3a57;
+--text:#eef2f9;--muted:#93a0b8;--dim:#66728c;--accent:#5fc9ff;--good:#4ad494;--bad:#ff6b6b;
+--font:"Pretendard Variable",Pretendard,"IBM Plex Sans","Malgun Gothic",system-ui,sans-serif;
+--mono:"IBM Plex Mono",Consolas,monospace}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);
-background-image:radial-gradient(ellipse at 50% -20%,rgba(50,90,160,.30),transparent 60%)}
-.wrap{max-width:1040px;margin:0 auto;padding:48px 16px 72px}
-header{margin-bottom:36px}
-.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
-h1{margin:10px 0 12px;font-size:30px;font-weight:600;letter-spacing:-.02em;text-wrap:balance}
-.lede{margin:0;color:var(--muted);font-size:15px;line-height:1.65;max-width:62ch}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;margin-top:32px}
-.card{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);
-border-radius:12px;padding:18px;transition:border-color .15s,transform .15s}
-.card:hover{border-color:var(--accent);transform:translateY(-2px)}
-.card h2{margin:0 0 4px;font-size:17px;font-weight:600}
-.card .sub{font-family:var(--mono);font-size:12px;color:var(--muted)}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
-.tag{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:999px;
-border:1px solid var(--line);color:var(--text);background:rgba(255,255,255,.03)}
-.tag.ok{border-color:rgba(74,212,148,.5);color:var(--good)}
-.tag.no{border-color:rgba(255,107,107,.5);color:var(--bad)}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:14px;
-border-top:1px dashed var(--line)}
-.stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.stat .v{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
-.note{margin-top:40px;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel);
-color:var(--muted);font-size:13px;line-height:1.7}
-.note b{color:var(--text);font-weight:600}
-footer{margin-top:36px;color:var(--muted);font-size:12px;font-family:var(--mono)}
-@media (max-width:520px){h1{font-size:24px}.wrap{padding:32px 16px 56px}}
+html{scroll-behavior:smooth}
+body{margin:0;color:var(--text);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;
+background-color:var(--bg);background-repeat:no-repeat;
+background-image:radial-gradient(1100px 720px at 82% -12%,rgba(56,104,196,.34),transparent 62%),
+radial-gradient(900px 600px at -12% 38%,rgba(36,64,130,.2),transparent 60%)}
+a{color:inherit}
+.sky{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;color:var(--accent)}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:22px;padding-bottom:22px}
+.brand{font-weight:700;font-size:15px;letter-spacing:-.01em;text-decoration:none;display:flex;align-items:center;gap:10px}
+.brand i{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
+.topbar nav{display:flex;gap:4px;flex-wrap:wrap}
+.topbar nav a{padding:7px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:14px}
+.topbar nav a:hover{color:var(--text);background:rgba(255,255,255,.05)}
+
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:52px;align-items:center;
+min-height:min(calc(100vh - 80px),860px);padding-bottom:48px}
+.hero.solo{grid-template-columns:minmax(0,1fr)}
+.hero h1{margin:16px 0 12px;font-size:clamp(34px,4.4vw,58px);line-height:1.14;font-weight:800;letter-spacing:-.04em;text-wrap:balance}
+.hero h1 .hl{background:linear-gradient(95deg,#ffffff 0%,#b5e2ff 50%,#5fc9ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.subtitle{margin:0 0 22px;font-size:clamp(16px,1.6vw,20px);color:#c5cfe1;font-weight:500;letter-spacing:-.01em}
+.lede{margin:0;color:var(--muted);font-size:15.5px;line-height:1.8;max-width:54ch}
+.facts{display:grid;grid-template-columns:repeat(4,auto);justify-content:start;gap:12px 30px;margin:28px 0 30px;
+padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.facts b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.facts span{font-size:12.5px;color:var(--muted)}
+.cta{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;border:1px solid var(--line2);
+background:rgba(255,255,255,.04);text-decoration:none;font-weight:600;font-size:14.5px;transition:border-color .15s,background .15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#03111b}
+.btn.primary:hover{background:#8ad8ff}
+.hero-shot{position:relative;display:block;aspect-ratio:16/9;border-radius:18px;overflow:hidden;background:#02040a;
+border:1px solid var(--line2);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 100px rgba(60,120,220,.2)}
+.hero-shot img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .7s}
+.hero-shot:hover img{transform:scale(1.03)}
+.hero-cap{position:absolute;left:16px;bottom:16px;display:inline-flex;align-items:center;gap:10px;padding:7px 16px 7px 7px;
+border-radius:999px;background:rgba(4,7,14,.74);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+border:1px solid var(--line2);font-size:14px;font-weight:600}
+.playbtn{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);
+color:#03111b;font-size:12px;padding-left:2px}
+
+section.wrap{padding-top:88px;scroll-margin-top:-60px}
+.sec-head{max-width:780px;margin-bottom:28px}
+.sec-head h2{margin:10px 0 10px;font-size:clamp(25px,2.8vw,36px);font-weight:750;letter-spacing:-.035em;line-height:1.25;text-wrap:balance}
+.sec-head p{margin:0;color:var(--muted);font-size:15px;line-height:1.75}
+
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.res{position:relative;padding:22px 22px 18px;border-radius:16px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.res::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--c)}
+.res-target{display:flex;align-items:baseline;gap:8px}
+.res-target b{font-size:18px;font-weight:700}
+.res-target span{color:var(--muted);font-size:13.5px}
+.res-win{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:16px 0 4px}
+.res-method{display:flex;align-items:center;gap:9px;font-size:27px;font-weight:800;letter-spacing:-.03em;color:var(--c)}
+.rank1{padding:3px 7px;border-radius:6px;background:var(--c);color:#03111b;font-size:11.5px;font-weight:700}
+.res-rate{font-family:var(--mono);font-size:40px;font-weight:500;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.res-rate small{margin-left:2px;font-size:18px;color:var(--muted)}
+.res-cap{color:var(--dim);font-size:12px}
+.chart{display:block;width:100%;height:auto;margin:12px 0 8px}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .tick{fill:var(--dim);font-size:10px;font-family:var(--mono)}
+.chart .axis{fill:var(--dim);font-size:10.5px}
+.chart .band{opacity:.17}
+.chart polyline{fill:none;stroke-linejoin:round;stroke-linecap:round}
+.chart .win{stroke-width:3}
+.chart .other{stroke-width:1.6;opacity:.6}
+.res-rank{list-style:none;margin:0;padding:12px 0 0;border-top:1px dashed var(--line);display:grid;gap:6px;font-size:13.5px}
+.res-rank li{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.res-rank li:first-child{color:var(--text);font-weight:600}
+.res-rank i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.res-rank b{margin-left:auto;font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+
+.run{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;background:var(--panel);border:1px solid var(--line);
+text-decoration:none;transition:border-color .2s,transform .2s,box-shadow .2s}
+.run:hover{border-color:var(--c);transform:translateY(-3px);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.thumb{position:relative;aspect-ratio:16/9;overflow:hidden;background:radial-gradient(ellipse at 50% 130%,rgba(70,130,220,.4),transparent 60%),#05080f}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .5s}
+.run:hover .thumb img{transform:scale(1.04)}
+.thumb .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--c);font-size:22px;font-weight:700}
+.badge{position:absolute;top:12px;left:12px;padding:4px 10px;border-radius:999px;border:1px solid;font-size:12px;font-weight:600;
+background:rgba(4,7,14,.76);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.badge.ok{color:var(--good);border-color:rgba(74,212,148,.5)}
+.badge.no{color:var(--bad);border-color:rgba(255,107,107,.5)}
+.thumb .playbtn{position:absolute;right:12px;bottom:12px;width:40px;height:40px;font-size:14px;transition:transform .2s}
+.run:hover .thumb .playbtn{transform:scale(1.12)}
+.run-body{padding:16px 18px 18px}
+.run h3{display:flex;align-items:center;gap:9px;margin:0 0 4px;font-size:18px;font-weight:700;letter-spacing:-.01em}
+.run h3 i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 12px var(--c)}
+.run .sub{color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin:14px 0 0;padding-top:14px;border-top:1px dashed var(--line)}
+.stats dt{color:var(--muted);font-size:12px}
+.stats dd{margin:2px 0 0;font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums}
+
+.guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+.guide>div{padding:20px 22px;border-radius:16px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:14px;line-height:1.8}
+.guide h3{margin:0 0 8px;color:var(--text);font-size:15px;font-weight:700}
+kbd{padding:1px 6px;border-radius:5px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);font-family:var(--mono);font-size:12px}
+footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px solid var(--line);color:var(--dim);font-size:12.5px}
+@media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;gap:36px;padding-top:8px}}
+@media (max-width:640px){.wrap{padding:0 16px}.topbar nav{display:none}.facts{grid-template-columns:1fr 1fr}section.wrap{padding-top:56px}
+.res-rate{font-size:34px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="eyebrow">PyBullet · LVLH 상대 궤도 역학</div>
-      <h1>회전 우주 파편 포획 시뮬레이션</h1>
-      <p class="lede">
-        회전하는 우주 파편을 포획할 때 대상의 회전 속도와 질량에 따라 로봇팔·그물·작살 중 어떤 방식이
-        유효한지 비교한다. 아래는 포획 순간을 그대로 재생하는 3D 리플레이다. 물리는 미리 계산된 궤적이며
-        시각화가 결과를 바꾸지 않는다.
-      </p>
-    </header>
-    <div class="grid">
-      <a class="card" href="runs/arm_small_10degs.html">
-        <h2>로봇팔 · 소형 10 kg</h2>
-        <div class="sub">회전 10 deg/s · seed 0</div>
-        <div class="tags">
-          <span class="tag ok">포획 성공</span>
-          <span class="tag">8 s 재생</span>
-        </div>
-        <div class="stats">
-          <div class="stat"><div class="k">감속 시간</div><div class="v">1.2 s</div></div>
-          <div class="stat"><div class="k">최대 충격량</div><div class="v">2.2 N·s</div></div>
-          <div class="stat"><div class="k">잔류 상대 각속도</div><div class="v">0.00 °/s</div></div>
-          <div class="stat"><div class="k">서비서 자세 변화</div><div class="v">21°</div></div>
-        </div>
-      </a>
-      <a class="card" href="runs/net_medium_10degs.html">
-        <h2>그물 · 중형 500 kg</h2>
-        <div class="sub">회전 10 deg/s · seed 0</div>
-        <div class="tags">
-          <span class="tag ok">포획 성공</span>
-          <span class="tag">13 s 재생</span>
-        </div>
-        <div class="stats">
-          <div class="stat"><div class="k">감속 시간</div><div class="v">8.2 s</div></div>
-          <div class="stat"><div class="k">최대 충격량</div><div class="v">4.9 N·s</div></div>
-          <div class="stat"><div class="k">잔류 상대 각속도</div><div class="v">0.69 °/s</div></div>
-          <div class="stat"><div class="k">서비서 자세 변화</div><div class="v">2°</div></div>
-        </div>
-      </a>
-      <a class="card" href="runs/harpoon_medium_10degs.html">
-        <h2>작살 · 중형 500 kg</h2>
-        <div class="sub">회전 10 deg/s · seed 0</div>
-        <div class="tags">
-          <span class="tag ok">포획 성공</span>
-          <span class="tag">130 s 재생</span>
-        </div>
-        <div class="stats">
-          <div class="stat"><div class="k">감속 시간</div><div class="v">126.3 s</div></div>
-          <div class="stat"><div class="k">최대 충격량</div><div class="v">87.0 N·s</div></div>
-          <div class="stat"><div class="k">잔류 상대 각속도</div><div class="v">0.48 °/s</div></div>
-          <div class="stat"><div class="k">서비서 자세 변화</div><div class="v">180°</div></div>
-        </div>
-      </a>
-    </div>
-    <div class="note">
-      <b>보는 법.</b> 마우스 드래그로 회전, 휠로 확대·축소, Shift 드래그로 이동한다.
-      키 1~4 로 카메라 추적 대상을 바꾸고 Space 로 재생과 정지를 전환한다. 자세한 조작은 화면 우측 아래 "조작법" 에 있다.
-      오른쪽 그래프의 가로 점선은 포획 성공 기준인 상대 각속도
-      1 deg/s 이고, 초록 음영은 결합이 유지된 구간이다.
-      <br><br>
-      <b>성공 판정.</b> 대상과 서비스 위성의 상대 각속도가
-      1 deg/s 이하로 떨어지고 그 상태가
-      3 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
-    </div>
-    <footer>고도 500 km 기준 궤도 · 적분 간격 1/480 s · 2026 공군사관학교 미래 항공우주 학술대회</footer>
+  <canvas class="sky" aria-hidden="true"></canvas>
+  <div class="topbar wrap">
+    <a class="brand" href="#"><i></i>회전 우주 파편 포획 시뮬레이션</a>
+    <nav><a href="#results">핵심 결과</a><a href="#replays">3D 리플레이</a><a href="#guide">보는 법</a></nav>
   </div>
+
+  <header class="hero wrap">
+    <div>
+      <div class="eyebrow">2026 공군사관학교 미래 항공우주 학술대회</div>
+      <h1>회전하는 우주 파편의<br><span class="hl">포획 방식 비교</span></h1>
+      <p class="subtitle">로봇팔 · 그물 · 작살의 물리 시뮬레이션 기반 정량 평가</p>
+      <p class="lede">지구 저궤도 파편은 대부분 회전하고 있어, 제거하려면 회전체를 안전하게 붙잡아야 한다.
+      PyBullet 다물체 동역학에 상대 궤도 역학을 더해 세 방식을 같은 조건에서 비교했다. 질량 10 · 500 · 2,000 kg 파편을 0–30 deg/s 로 회전시키고 4,320회 포획을 시도해, 상대 각속도가 1 deg/s 이하로 잦아들어 3 초 이상 유지되면 성공으로 셌다.</p>
+      <div class="facts">
+        <div><b>4,320회</b><span>몬테카를로 시행</span></div>
+        <div><b>3가지</b><span>포획 방식</span></div>
+        <div><b>10 · 500 · 2,000 kg</b><span>파편 질량</span></div>
+        <div><b>0–30°/s</b><span>회전 속도</span></div>
+      </div>
+      <div class="cta"><a class="btn primary" href="#results">핵심 결과 보기</a><a class="btn" href="#replays">3D 리플레이</a></div>
+    </div>
+    <a class="hero-shot" href="runs/net_medium_10degs.html">
+      <img src="assets/thumbs/net_medium_10degs.jpg" alt="그물 포획 장면">
+      <span class="hero-cap"><span class="playbtn" aria-hidden="true">▶</span>그물 포획 리플레이 보기</span>
+    </a>
+  </header>
+
+  <section id="results" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">핵심 결과</div>
+      <h2>파편의 질량에 따라 가장 유효한 방식이 달라진다</h2>
+      <p>회전하는 대상(2–30 deg/s)에 대한 방식별 포획 성공률이다. 조합마다 450회를 시뮬레이션했다.
+      곡선은 회전 속도별 성공률이고, 음영은 1위 방식의 95 % 신뢰구간이다.</p>
+    </div>
+    <div class="grid3">
+        <article class="res" style="--c:#5fc9ff">
+          <div class="res-target"><b>소형</b><span>10 kg 큐브샛</span></div>
+          <div class="res-win">
+            <div class="res-method"><span class="rank1">1위</span>로봇팔</div>
+            <div class="res-rate">88.2<small>%</small></div>
+          </div>
+          <div class="res-cap">회전하는 대상 포획 성공률</div>
+          <svg class="chart" viewBox="0 0 320 172" role="img" aria-label="소형 대상의 회전 속도별 방식 성공률"><line class="grid" x1="36" x2="312" y1="140.0" y2="140.0"/><text class="tick" x="30" y="143.5" text-anchor="end">0%</text><line class="grid" x1="36" x2="312" y1="74.0" y2="74.0"/><text class="tick" x="30" y="77.5" text-anchor="end">50%</text><line class="grid" x1="36" x2="312" y1="8.0" y2="8.0"/><text class="tick" x="30" y="11.5" text-anchor="end">100%</text><text class="tick" x="36.0" y="154" text-anchor="middle">0</text><text class="tick" x="128.0" y="154" text-anchor="middle">10</text><text class="tick" x="220.0" y="154" text-anchor="middle">20</text><text class="tick" x="312.0" y="154" text-anchor="middle">30</text><text class="axis" x="312" y="170" text-anchor="end">회전 속도 (deg/s)</text><polygon class="band" points="36.0,8.0 54.4,8.0 72.8,8.0 91.2,8.8 109.6,12.6 128.0,17.7 146.4,36.9 164.8,40.5 183.2,23.6 201.6,17.7 220.0,15.0 238.4,8.8 256.8,8.8 275.2,8.8 293.6,8.8 312.0,8.8 312.0,30.0 293.6,30.0 275.2,30.0 256.8,30.0 238.4,30.0 220.0,47.2 201.6,52.3 183.2,62.0 164.8,84.1 146.4,79.9 128.0,52.3 109.6,41.8 91.2,30.0 72.8,23.0 54.4,23.0 36.0,23.0" fill="#5fc9ff"/><polyline class="other" points="36.0,118.0 54.4,131.2 72.8,113.6 91.2,91.6 109.6,100.4 128.0,104.8 146.4,118.0 164.8,113.6 183.2,104.8 201.6,126.8 220.0,118.0 238.4,100.4 256.8,135.6 275.2,131.2 293.6,131.2 312.0,104.8" stroke="#86e07f"/><polyline class="other" points="36.0,131.2 54.4,131.2 72.8,126.8 91.2,126.8 109.6,122.4 128.0,122.4 146.4,135.6 164.8,131.2 183.2,131.2 201.6,126.8 220.0,135.6 238.4,122.4 256.8,118.0 275.2,122.4 293.6,118.0 312.0,126.8" stroke="#ffb457"/><polyline class="win" points="36.0,8.0 54.4,8.0 72.8,8.0 91.2,12.4 109.6,21.2 128.0,30.0 146.4,56.4 164.8,60.8 183.2,38.8 201.6,30.0 220.0,25.6 238.4,12.4 256.8,12.4 275.2,12.4 293.6,12.4 312.0,12.4" stroke="#5fc9ff"/></svg>
+          <ol class="res-rank"><li style="--c:#5fc9ff"><i></i>로봇팔<b>88.2%</b></li><li style="--c:#86e07f"><i></i>그물<b>18.9%</b></li><li style="--c:#ffb457"><i></i>작살<b>10.2%</b></li></ol>
+        </article>
+        <article class="res" style="--c:#86e07f">
+          <div class="res-target"><b>중형</b><span>500 kg 위성</span></div>
+          <div class="res-win">
+            <div class="res-method"><span class="rank1">1위</span>그물</div>
+            <div class="res-rate">71.8<small>%</small></div>
+          </div>
+          <div class="res-cap">회전하는 대상 포획 성공률</div>
+          <svg class="chart" viewBox="0 0 320 172" role="img" aria-label="중형 대상의 회전 속도별 방식 성공률"><line class="grid" x1="36" x2="312" y1="140.0" y2="140.0"/><text class="tick" x="30" y="143.5" text-anchor="end">0%</text><line class="grid" x1="36" x2="312" y1="74.0" y2="74.0"/><text class="tick" x="30" y="77.5" text-anchor="end">50%</text><line class="grid" x1="36" x2="312" y1="8.0" y2="8.0"/><text class="tick" x="30" y="11.5" text-anchor="end">100%</text><text class="tick" x="36.0" y="154" text-anchor="middle">0</text><text class="tick" x="128.0" y="154" text-anchor="middle">10</text><text class="tick" x="220.0" y="154" text-anchor="middle">20</text><text class="tick" x="312.0" y="154" text-anchor="middle">30</text><text class="axis" x="312" y="170" text-anchor="end">회전 속도 (deg/s)</text><polygon class="band" points="36.0,47.9 54.4,68.1 72.8,44.1 91.2,51.8 109.6,44.1 128.0,47.9 146.4,30.0 164.8,30.0 183.2,15.0 201.6,12.6 220.0,17.7 238.4,17.7 256.8,17.7 275.2,12.6 293.6,20.5 312.0,15.0 312.0,47.2 293.6,57.2 275.2,41.8 256.8,52.3 238.4,52.3 220.0,52.3 201.6,41.8 183.2,47.2 164.8,71.2 146.4,71.2 128.0,92.3 109.6,88.3 91.2,96.2 72.8,88.3 54.4,111.1 36.0,92.3" fill="#86e07f"/><polyline class="other" points="36.0,82.8 54.4,82.8 72.8,96.0 91.2,104.8 109.6,118.0 128.0,126.8 146.4,131.2 164.8,126.8 183.2,131.2 201.6,131.2 220.0,131.2 238.4,131.2 256.8,135.6 275.2,135.6 293.6,135.6 312.0,135.6" stroke="#5fc9ff"/><polyline class="other" points="36.0,34.4 54.4,135.6 72.8,122.4 91.2,109.2 109.6,122.4 128.0,113.6 146.4,113.6 164.8,118.0 183.2,113.6 201.6,122.4 220.0,118.0 238.4,126.8 256.8,122.4 275.2,135.6 293.6,126.8 312.0,122.4" stroke="#ffb457"/><polyline class="win" points="36.0,69.6 54.4,91.6 72.8,65.2 91.2,74.0 109.6,65.2 128.0,69.6 146.4,47.6 164.8,47.6 183.2,25.6 201.6,21.2 220.0,30.0 238.4,30.0 256.8,30.0 275.2,21.2 293.6,34.4 312.0,25.6" stroke="#86e07f"/></svg>
+          <ol class="res-rank"><li style="--c:#86e07f"><i></i>그물<b>71.8%</b></li><li style="--c:#ffb457"><i></i>작살<b>14.0%</b></li><li style="--c:#5fc9ff"><i></i>로봇팔<b>12.4%</b></li></ol>
+        </article>
+        <article class="res" style="--c:#5fc9ff">
+          <div class="res-target"><b>대형</b><span>2,000 kg 로켓 단</span></div>
+          <div class="res-win">
+            <div class="res-method"><span class="rank1">1위</span>로봇팔</div>
+            <div class="res-rate">56.4<small>%</small></div>
+          </div>
+          <div class="res-cap">회전하는 대상 포획 성공률</div>
+          <svg class="chart" viewBox="0 0 320 172" role="img" aria-label="대형 대상의 회전 속도별 방식 성공률"><line class="grid" x1="36" x2="312" y1="140.0" y2="140.0"/><text class="tick" x="30" y="143.5" text-anchor="end">0%</text><line class="grid" x1="36" x2="312" y1="74.0" y2="74.0"/><text class="tick" x="30" y="77.5" text-anchor="end">50%</text><line class="grid" x1="36" x2="312" y1="8.0" y2="8.0"/><text class="tick" x="30" y="11.5" text-anchor="end">100%</text><text class="tick" x="36.0" y="154" text-anchor="middle">0</text><text class="tick" x="128.0" y="154" text-anchor="middle">10</text><text class="tick" x="220.0" y="154" text-anchor="middle">20</text><text class="tick" x="312.0" y="154" text-anchor="middle">30</text><text class="axis" x="312" y="170" text-anchor="end">회전 속도 (deg/s)</text><polygon class="band" points="36.0,8.0 54.4,8.0 72.8,12.6 91.2,26.7 109.6,55.7 128.0,51.8 146.4,33.4 164.8,36.9 183.2,30.0 201.6,33.4 220.0,36.9 238.4,36.9 256.8,55.7 275.2,81.3 293.6,95.7 312.0,118.0 312.0,139.2 293.6,130.3 275.2,121.3 256.8,100.1 238.4,79.9 220.0,79.9 201.6,75.6 183.2,71.2 164.8,79.9 146.4,75.6 128.0,96.2 109.6,100.1 91.2,66.7 72.8,41.8 54.4,23.0 36.0,23.0" fill="#5fc9ff"/><polyline class="other" points="36.0,140.0 54.4,140.0 72.8,140.0 91.2,140.0 109.6,140.0 128.0,140.0 146.4,140.0 164.8,140.0 183.2,140.0 201.6,140.0 220.0,140.0 238.4,140.0 256.8,140.0 275.2,140.0 293.6,140.0 312.0,140.0" stroke="#86e07f"/><polyline class="other" points="36.0,8.0 54.4,100.4 72.8,126.8 91.2,135.6 109.6,126.8 128.0,135.6 146.4,140.0 164.8,140.0 183.2,140.0 201.6,140.0 220.0,122.4 238.4,131.2 256.8,135.6 275.2,140.0 293.6,140.0 312.0,140.0" stroke="#ffb457"/><polyline class="win" points="36.0,8.0 54.4,8.0 72.8,21.2 91.2,43.2 109.6,78.4 128.0,74.0 146.4,52.0 164.8,56.4 183.2,47.6 201.6,52.0 220.0,56.4 238.4,56.4 256.8,78.4 275.2,104.8 293.6,118.0 312.0,135.6" stroke="#5fc9ff"/></svg>
+          <ol class="res-rank"><li style="--c:#5fc9ff"><i></i>로봇팔<b>56.4%</b></li><li style="--c:#ffb457"><i></i>작살<b>5.3%</b></li><li style="--c:#86e07f"><i></i>그물<b>0.0%</b></li></ol>
+        </article>
+    </div>
+  </section>
+  <section id="replays" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">3D 리플레이</div>
+      <h2>포획 순간 다시 보기</h2>
+      <p>방식마다 대표 시행 하나를 물리 엔진이 계산한 궤적 그대로 재생한다. 시각화는 결과를 바꾸지 않는다.</p>
+    </div>
+    <div class="grid3">
+
+      <a class="run" href="runs/arm_small_10degs.html" style="--c:#5fc9ff">
+        <div class="thumb"><img src="assets/thumbs/arm_small_10degs.jpg" alt="로봇팔 · 소형 10 kg 포획 장면" loading="lazy"><span class="badge ok">포획 성공</span><span class="playbtn" aria-hidden="true">▶</span></div>
+        <div class="run-body">
+          <h3><i></i>로봇팔 · 소형 10 kg</h3>
+          <div class="sub">회전 10 deg/s · 시드 0 · 8 s 재생</div>
+          <dl class="stats">
+            <div><dt>감속 시간</dt><dd>1.2 s</dd></div>
+            <div><dt>최대 충격량</dt><dd>2.2 N·s</dd></div>
+            <div><dt>잔류 상대 각속도</dt><dd>0.00 °/s</dd></div>
+            <div><dt>서비서 자세 변화</dt><dd>21°</dd></div>
+          </dl>
+        </div>
+      </a>
+      <a class="run" href="runs/net_medium_10degs.html" style="--c:#86e07f">
+        <div class="thumb"><img src="assets/thumbs/net_medium_10degs.jpg" alt="그물 · 중형 500 kg 포획 장면" loading="lazy"><span class="badge ok">포획 성공</span><span class="playbtn" aria-hidden="true">▶</span></div>
+        <div class="run-body">
+          <h3><i></i>그물 · 중형 500 kg</h3>
+          <div class="sub">회전 10 deg/s · 시드 0 · 13 s 재생</div>
+          <dl class="stats">
+            <div><dt>감속 시간</dt><dd>8.2 s</dd></div>
+            <div><dt>최대 충격량</dt><dd>4.9 N·s</dd></div>
+            <div><dt>잔류 상대 각속도</dt><dd>0.69 °/s</dd></div>
+            <div><dt>서비서 자세 변화</dt><dd>2°</dd></div>
+          </dl>
+        </div>
+      </a>
+      <a class="run" href="runs/harpoon_medium_10degs.html" style="--c:#ffb457">
+        <div class="thumb"><img src="assets/thumbs/harpoon_medium_10degs.jpg" alt="작살 · 중형 500 kg 포획 장면" loading="lazy"><span class="badge ok">포획 성공</span><span class="playbtn" aria-hidden="true">▶</span></div>
+        <div class="run-body">
+          <h3><i></i>작살 · 중형 500 kg</h3>
+          <div class="sub">회전 10 deg/s · 시드 0 · 130 s 재생</div>
+          <dl class="stats">
+            <div><dt>감속 시간</dt><dd>126.3 s</dd></div>
+            <div><dt>최대 충격량</dt><dd>87.0 N·s</dd></div>
+            <div><dt>잔류 상대 각속도</dt><dd>0.48 °/s</dd></div>
+            <div><dt>서비서 자세 변화</dt><dd>180°</dd></div>
+          </dl>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section id="guide" class="wrap">
+    <div class="guide">
+      <div>
+        <h3>보는 법</h3>
+        마우스 드래그로 회전, 휠로 확대·축소, <kbd>Shift</kbd> 드래그로 이동한다.
+        <kbd>Space</kbd> 재생·정지, <kbd>1</kbd>~<kbd>4</kbd> 카메라 추적 대상,
+        <kbd>P</kbd> 발표 모드(핵심 수치만 크게), <kbd>O</kbd> 카메라 자동 회전.
+        그물이 솜뭉치처럼 보이면 아래 "질점" 을 꺼서 스프링 선만 남긴다.
+      </div>
+      <div>
+        <h3>성공 판정</h3>
+        대상과 서비스 위성의 상대 각속도가 1 deg/s 이하로 떨어지고 그 상태가
+        3 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
+        뷰어 그래프의 가로 점선이 이 기준이고, 초록 음영은 결합이 유지된 구간이다.
+      </div>
+    </div>
+  </section>
+
+  <footer class="wrap">고도 500 km 원궤도 기준 · 적분 간격 1/480 s · 2026 공군사관학교 미래 항공우주 학술대회</footer>
+  <script>
+(function () {
+  const c = document.querySelector(".sky"), g = c.getContext("2d");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let stars = [], w = 0, h = 0;
+  function init() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    w = innerWidth; h = innerHeight; c.width = w * dpr; c.height = h * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    stars = Array.from({ length: Math.round(w * h / 4200) }, () => ({
+      x: rnd() * w, y: rnd() * h, r: 0.35 + Math.pow(rnd(), 5) * 1.5, a: 0.2 + rnd() * 0.6, p: rnd() * 6.28, f: 0.3 + rnd() }));
+  }
+  function draw(t) {
+    g.clearRect(0, 0, w, h); g.fillStyle = "#dfe8ff";
+    for (const st of stars) {
+      g.globalAlpha = still ? st.a : st.a * (0.7 + 0.3 * Math.sin(st.p + t * 0.0012 * st.f));
+      g.beginPath(); g.arc(st.x, st.y, st.r, 0, 6.283); g.fill();
+    }
+    if (!still) requestAnimationFrame(draw);
+  }
+  addEventListener("resize", () => { init(); if (still) draw(0); });
+  init(); requestAnimationFrame(draw);
+})();
+</script>
 </body>
 </html>

@@ -250,14 +250,19 @@ python capture_sim.py --method net --target medium --spin 10 --viewer out.html -
 python capture_sim.py --method arm --target large --spin 20 --viewer arm20.html --trajectory arm20.json
 ```
 
-- **재생**: 재생·일시정지, 타임라인 스크럽, 0.25~4배속, `,` `.` 한 프레임 이동. 접촉·결합·이탈 시점이 표시된다.
+- **재생**: 재생·일시정지, 타임라인 스크럽, 0.25~4배속(30 초가 넘는 시행은 16배속까지), `,` `.` 한 프레임 이동.
+  접촉·결합·이탈 시점이 표시되고, 재생 중 첫 접촉·그물 입구 조임·감속 완료 순간과 최종 판정을 화면에 크게 알린다.
 - **카메라**: 마우스 드래그 회전, 휠 줌, Shift 또는 오른쪽 드래그 팬, 터치 핀치 줌.
-  중점·대상·서비서·자유 네 가지 추적 모드(키 1~4), `R` 리셋.
-- **텔레메트리**: 시각, 상대 각속도, 대상 각속도, 거리, 결합 상태, 방식별 상태를 실시간 표시.
+  중점·대상·서비서·자유 네 가지 추적 모드(키 1~4), `R` 리셋, `O` 자동 회전.
+- **텔레메트리**: 시각, 상대 각속도, 대상 각속도, 거리, 결합 상태, 방식별 상태(파지 단계·그물 접촉 질점 수·작살 상태)를 실시간 표시.
 - **그래프**: 상대 각속도 시계열에 임계값 선과 결합 유지 구간 음영. 클릭하면 그 시각으로 이동한다.
-- 스프링·회전축·파지점·궤적·지구 표시 토글, 스크린샷, 전체화면. `?` 또는 `H` 로 조작법.
+- **발표 모드**: `P` 또는 "발표 모드" 버튼. 오른쪽 패널과 카메라 줄을 숨기고 상대 각속도·결합·현재 단계만 크게 띄운다.
+  주소 뒤에 `?present` 를 붙이면 처음부터 발표 모드로 열린다.
+- 스프링·질점·회전축·파지점·궤적·지구 표시 토글, 스크린샷, 전체화면. `?` 또는 `H` 로 조작법.
+  그물 질점은 실제 충돌 반경으로 그려 솜뭉치처럼 보이므로, 그물 모양을 설명할 때는 "질점" 을 끄면 된다.
 
-지구 텍스처와 three.js 를 모두 내장하므로 인터넷 없이 열린다. 파일은 시행 길이에 따라 1~7 MB 다.
+지구 텍스처와 three.js 를 모두 내장하므로 인터넷 없이 열린다(한글 글꼴만 온라인일 때 Pretendard 를 받아 쓴다).
+파일은 시행 길이에 따라 1~7 MB 다.
 
 ### 웹 배포 (`build_site.py`)
 
@@ -266,6 +271,7 @@ python capture_sim.py --method arm --target large --spin 20 --viewer arm20.html 
 
 ```bash
 python build_site.py                 # demo/*.html 로 site/ 생성
+python build_site.py --thumbs        # 리플레이 썸네일도 새로 찍는다 (Edge 또는 Chrome 필요)
 python build_site.py --serve         # 빌드 후 http://localhost:8000 에서 확인
 python build_site.py --inputs a.json b.html --out site
 ```
@@ -273,13 +279,20 @@ python build_site.py --inputs a.json b.html --out site
 이미 만들어 둔 리플레이 HTML 에서 궤적을 도로 꺼내 쓰므로 **재시뮬레이션이 필요 없다.**
 궤적 JSON(`--trajectory`)을 직접 줘도 된다.
 
+첫 화면은 발표용으로 꾸몄다. 연구 소개와 실험 규모, 대상별 회전 속도-성공률 곡선(핵심 결과),
+썸네일이 붙은 리플레이 목록 순서다. 핵심 결과는 `results/results_summary.csv` 에서 그리며,
+원고 요약문과 같은 기준(회전하는 대상만 집계)이라 수치가 원고와 일치한다. CSV 가 없으면 그 절만 빠진다.
+썸네일은 헤드리스 브라우저로 각 뷰어를 `?clean&t=첫 접촉+2.5초` 로 열어 찍는다.
+리플레이를 바꿨을 때만 `--thumbs` 를 다시 주면 된다. 빌드가 `site/` 를 지우지 않아 한 번 찍은 썸네일은 남는다.
+
 ```
 site/
-  index.html          시행 목록 (성공 여부·감속 시간·충격량 요약)
-  runs/<이름>.html     뷰어. 공유 자산을 참조한다
-  data/<이름>.js       궤적 자료
-  assets/              three.min.js, earth.jpg (한 번만 올라간다)
-  vercel.json          캐시 헤더
+  index.html             첫 화면 (연구 소개 · 핵심 결과 · 리플레이 목록)
+  runs/<이름>.html        뷰어. 공유 자산을 참조하고, 위쪽에 첫 화면과 다른 시나리오로 가는 길이 붙는다
+  data/<이름>.js          궤적 자료
+  assets/                 three.min.js, earth.jpg (한 번만 올라간다)
+  assets/thumbs/          리플레이 썸네일
+  vercel.json             캐시 헤더
 ```
 
 **배포 방법 1 — GitHub Pages (현재 사용 중).** 배포본 주소는
