@@ -244,6 +244,7 @@
         <tr><td>O</td><td>카메라 자동 회전</td></tr>
         <tr><td>N</td><td>그물·테더 질점 표시 (발표 모드에서는 꺼진다)</td></tr>
         <tr><td>F11</td><td>브라우저 전체화면 (시나리오를 옮겨도 유지된다)</td></tr>
+        <tr><td>휴대폰</td><td>한 손가락 끌기로 회전 · 두 손가락으로 확대·축소</td></tr>
         <tr><td>? 또는 H</td><td>이 도움말</td></tr>
       </table>
       <div class="row"><span class="spacer"></span><button class="btn" id="helpClose">닫기</button></div>
@@ -252,7 +253,7 @@
   <div class="toast panel" id="toast"></div>
 </div>
 
-<script>window.__SITE_NAV__={"home": "../index.html", "runs": [{"name": "arm_small_10degs", "href": "arm_small_10degs.html", "label": "로봇팔 · 소형", "color": "#5fc9ff", "current": true}, {"name": "arm_medium_10degs", "href": "arm_medium_10degs.html", "label": "로봇팔 · 중형", "color": "#5fc9ff", "current": false}, {"name": "net_medium_10degs", "href": "net_medium_10degs.html", "label": "그물 · 중형", "color": "#86e07f", "current": false}, {"name": "harpoon_medium_10degs", "href": "harpoon_medium_10degs.html", "label": "작살 · 중형", "color": "#ffb457", "current": false}]};</script>
+<script>window.__SITE_NAV__={"home": "../index.html", "runs": [{"name": "arm_small_10degs", "href": "arm_small_10degs.html", "label": "로봇팔 · 소형", "color": "#5fc9ff", "current": true}, {"name": "arm_medium_10degs", "href": "arm_medium_10degs.html", "label": "로봇팔 · 중형", "color": "#5fc9ff", "current": false}, {"name": "net_medium_10degs", "href": "net_medium_10degs.html", "label": "그물 · 중형", "color": "#86e07f", "current": false}, {"name": "harpoon_medium_10degs", "href": "harpoon_medium_10degs.html", "label": "작살 · 중형", "color": "#ffb457", "current": false}, {"name": "net_large_10degs", "href": "net_large_10degs.html", "label": "그물 · 대형", "color": "#86e07f", "current": false}]};</script>
 <script src="../data/arm_small_10degs.js"></script>
 <script src="../assets/three.min.js"></script>
 <script>
@@ -818,7 +819,8 @@
     const ticks = niceTicks(0, relMax, 3);
     for (const v of ticks) { const y = Y(v); g.beginPath(); g.moveTo(L, y); g.lineTo(L + pw, y); g.stroke(); g.fillText(v.toFixed(v < 10 ? 1 : 0), L - 5, y); }
     g.textAlign = "center"; g.textBaseline = "top";
-    for (const t of niceTicks(0, T_END, 4)) { if (t > T_END) break; g.fillText(t.toFixed(0), X(t), T + ph + 4); }
+    // 오른쪽 끝의 단위 글자 "s" 와 겹치는 눈금 글자는 건너뛴다 (재생 길이가 눈금 간격의 배수일 때 "40" 과 "s" 가 겹쳤다)
+    for (const t of niceTicks(0, T_END, 4)) { if (t > T_END) break; if (X(t) > L + pw - 16) continue; g.fillText(t.toFixed(0), X(t), T + ph + 4); }
     g.textAlign = "right"; g.fillText("s", L + pw, T + ph + 4);
     // 임계값
     g.setLineDash([4, 4]); g.strokeStyle = "#f4b84a"; g.beginPath(); g.moveTo(L, Y(THR)); g.lineTo(L + pw, Y(THR)); g.stroke(); g.setLineDash([]);

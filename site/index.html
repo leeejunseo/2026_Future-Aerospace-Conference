@@ -115,7 +115,59 @@ section.wrap{padding-top:88px;scroll-margin-top:-60px}
 .axis-gap{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px}
 .axis-gap b{color:var(--text);font-family:var(--mono);font-weight:500}
 .axis-gap .ns{color:var(--warn)}
-.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+.tbl-wrap{overflow-x:auto;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.cost{width:100%;min-width:820px;border-collapse:collapse;font-size:14px}
+.cost th{padding:14px 14px 10px;text-align:left;color:var(--muted);font-size:12.5px;font-weight:600;vertical-align:bottom;
+border-bottom:1px solid var(--line2);white-space:nowrap}
+.cost th small{display:block;color:var(--dim);font-size:11.5px;font-weight:500}
+.cost td{padding:8px 14px;border-bottom:1px solid var(--line)}
+.cost tbody tr:last-child td{border-bottom:0}
+.cost tr.first td{border-top:1px solid var(--line2)}
+.cost tbody tr:first-child td{border-top:0}
+.cost .tg{vertical-align:top;padding-top:12px;font-weight:700;white-space:nowrap}
+.cost .tg span{display:block;color:var(--muted);font-size:12px;font-weight:500}
+.cost .m{display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted)}
+.cost .m i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.cost .m em{padding:1px 6px;border-radius:5px;background:var(--c);color:#03111b;font-size:11px;font-style:normal;font-weight:700}
+.cost .win .m{color:var(--text);font-weight:600}
+.v{display:grid;grid-template-columns:64px minmax(40px,1fr);align-items:center;gap:10px}
+.v b{text-align:right;font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v>span{height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+.v>span i{display:block;height:100%;border-radius:3px;background:var(--c);opacity:.75}
+.v.na b{color:var(--dim);font-family:var(--font);font-size:12.5px}
+.v.na>span{background:none}
+.swipe{display:none;margin:8px 0 0;color:var(--dim);font-size:12.5px}
+.cost-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:16px}
+.cost-notes div{padding:15px 18px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.025);
+color:var(--muted);font-size:13.5px;line-height:1.7}
+.cost-notes b{display:block;margin-bottom:3px;color:var(--text);font-size:14px}
+
+.concl{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.concl article{display:flex;flex-direction:column;padding:20px 22px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.concl .no{font-size:12.5px;font-weight:600;color:var(--accent);letter-spacing:.02em}
+.concl h3{margin:6px 0 8px;font-size:17.5px;font-weight:700;letter-spacing:-.02em;line-height:1.4;text-wrap:balance}
+.concl p{margin:0;color:var(--muted);font-size:14px;line-height:1.75}
+.ev{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:14px}
+.ev a{padding:4px 11px;border-radius:999px;border:1px solid var(--line2);font-size:12.5px;text-decoration:none;transition:border-color .15s}
+.ev a:hover{border-color:var(--accent)}
+.future{margin:18px 0 0;color:var(--muted);font-size:14px;line-height:1.7}
+.future b{margin-right:8px;color:var(--text)}
+
+.method{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.method>div{padding:20px 22px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.method h3{margin:0 0 14px;font-size:16px;font-weight:700}
+.spec{display:grid;grid-template-columns:92px minmax(0,1fr);gap:9px 16px;margin:0;font-size:13.5px;line-height:1.6}
+.spec dt{color:var(--muted)}
+.spec dd{margin:0}
+.limits{margin:0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.7}
+.limits li{margin-bottom:10px}
+.limits li::marker{color:var(--dim)}
+.limits b{color:var(--text);font-weight:600}
+.run-note{margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px;line-height:1.65}
+.qr{display:flex;gap:16px;align-items:flex-start}
+.qr img{flex:none;width:112px;height:112px;padding:6px;border-radius:10px;background:#fff}
 
 .run{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;background:var(--panel);border:1px solid var(--line);
 text-decoration:none;transition:border-color .2s,transform .2s,box-shadow .2s}
@@ -143,9 +195,12 @@ background:rgba(4,7,14,.76);backdrop-filter:blur(6px);-webkit-backdrop-filter:bl
 .guide h3{margin:0 0 8px;color:var(--text);font-size:15px;font-weight:700}
 kbd{padding:1px 6px;border-radius:5px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);font-family:var(--mono);font-size:12px}
 footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px solid var(--line);color:var(--dim);font-size:12.5px}
-@media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;gap:36px;padding-top:8px}}
+@media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;gap:36px;padding-top:8px}
+.method{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:860px){.swipe{display:block}}
 @media (max-width:640px){.wrap{padding:0 16px}.topbar nav{display:none}.facts>div{flex:1 1 40%}section.wrap{padding-top:56px}
-.res-rate{font-size:34px}}
+.res-rate{font-size:34px}.spec{grid-template-columns:minmax(0,1fr);gap:0}.spec dd{margin-bottom:10px}.qr img{display:none}
+.cost{min-width:0;font-size:13px}.cost th,.cost td{padding:8px 9px}.cost .tg span,.v>span,.cost th small{display:none}.v{display:block}.cost .m em{display:none}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 </style>
 </head>
@@ -153,7 +208,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
   <canvas class="sky" aria-hidden="true"></canvas>
   <div class="topbar wrap">
     <a class="brand" href="#"><i></i>회전 우주 파편 포획 시뮬레이션</a>
-    <nav><a href="#results">핵심 결과</a><a href="#replays">3D 리플레이</a><a href="#guide">보는 법</a></nav>
+    <nav><a href="#results">핵심 결과</a><a href="#costs">포획의 대가</a><a href="#conclusion">결론</a><a href="#replays">3D 리플레이</a><a href="#method">조건·한계</a><a href="#guide">보는 법</a></nav>
   </div>
 
   <header class="hero wrap">
@@ -242,6 +297,65 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
       </div>
     </div>
   </section>
+  <section id="costs" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">포획의 대가</div>
+      <h2>성공해도 감속에 걸리는 시간은 초 단위와 분 단위로 갈린다</h2>
+      <p>포획은 성공 여부만으로 끝나지 않는다. 성공률을 뺀 네 지표는 막대가 짧을수록 좋다.
+      감속 시간은 회전 대상에서 성공한 시행의 중앙값(로그 눈금), 잔류 상대 각속도는 중앙값,
+      최대 충격량과 서비스 위성 자세 변화는 정지를 포함한 전체 시행의 평균이다. 원고 표 2·3 과 같은 기준이다.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table class="cost">
+        <thead><tr><th>대상</th><th>방식</th><th>회전 대상 성공률<small>높을수록 좋다</small></th><th>감속 시간<small>성공 시행 중앙값</small></th>
+        <th>잔류 상대 각속도<small>deg/s</small></th><th>최대 충격량<small>N·s</small></th><th>서비스 위성 자세 변화<small>평균</small></th></tr></thead>
+        <tbody><tr class="first win"><td class="tg" rowspan="3">소형<span>10 kg 큐브샛</span></td><td><span class="m" style="--c:#5fc9ff"><i></i>로봇팔 <em>1위</em></span></td><td><span class="v" style="--c:#5fc9ff"><b>88.2 %</b><span><i style="width:88%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>1.2 s</b><span><i style="width:4%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>0.00</b><span><i style="width:2%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>2.4</b><span><i style="width:2%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>21°</b><span><i style="width:12%"></i></span></span></td></tr><tr class=""><td><span class="m" style="--c:#86e07f"><i></i>그물</span></td><td><span class="v" style="--c:#86e07f"><b>18.9 %</b><span><i style="width:19%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>114 s</b><span><i style="width:91%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>3.21</b><span><i style="width:19%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>3.3</b><span><i style="width:2%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>31°</b><span><i style="width:17%"></i></span></span></td></tr><tr class=""><td><span class="m" style="--c:#ffb457"><i></i>작살</span></td><td><span class="v" style="--c:#ffb457"><b>10.2 %</b><span><i style="width:10%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>138 s</b><span><i style="width:95%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>3.81</b><span><i style="width:23%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>10.6</b><span><i style="width:5%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>53°</b><span><i style="width:29%"></i></span></span></td></tr><tr class="first "><td class="tg" rowspan="3">중형<span>500 kg 위성</span></td><td><span class="m" style="--c:#5fc9ff"><i></i>로봇팔</span></td><td><span class="v" style="--c:#5fc9ff"><b>12.4 %</b><span><i style="width:12%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>2.3 s</b><span><i style="width:16%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>12.03</b><span><i style="width:72%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>7.3</b><span><i style="width:3%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>140°</b><span><i style="width:78%"></i></span></span></td></tr><tr class="win"><td><span class="m" style="--c:#86e07f"><i></i>그물 <em>1위</em></span></td><td><span class="v" style="--c:#86e07f"><b>71.8 %</b><span><i style="width:72%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>62 s</b><span><i style="width:79%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>0.61</b><span><i style="width:4%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>136.8</b><span><i style="width:65%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>144°</b><span><i style="width:80%"></i></span></span></td></tr><tr class=""><td><span class="m" style="--c:#ffb457"><i></i>작살</span></td><td><span class="v" style="--c:#ffb457"><b>14.0 %</b><span><i style="width:14%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>47 s</b><span><i style="width:74%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>3.90</b><span><i style="width:23%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>130.3</b><span><i style="width:61%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>158°</b><span><i style="width:88%"></i></span></span></td></tr><tr class="first win"><td class="tg" rowspan="3">대형<span>2,000 kg 로켓 단</span></td><td><span class="m" style="--c:#5fc9ff"><i></i>로봇팔 <em>1위</em></span></td><td><span class="v" style="--c:#5fc9ff"><b>56.4 %</b><span><i style="width:56%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>2.3 s</b><span><i style="width:16%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>0.06</b><span><i style="width:2%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>6.3</b><span><i style="width:3%"></i></span></span></td><td><span class="v" style="--c:#5fc9ff"><b>52°</b><span><i style="width:29%"></i></span></span></td></tr><tr class=""><td><span class="m" style="--c:#86e07f"><i></i>그물</span></td><td><span class="v" style="--c:#86e07f"><b>0.0 %</b><span><i style="width:2%"></i></span></span></td><td><span class="v na"><b>성공 없음</b><span></span></span></td><td><span class="v" style="--c:#86e07f"><b>16.72</b><span><i style="width:100%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>0.8</b><span><i style="width:2%"></i></span></span></td><td><span class="v" style="--c:#86e07f"><b>95°</b><span><i style="width:53%"></i></span></span></td></tr><tr class=""><td><span class="m" style="--c:#ffb457"><i></i>작살</span></td><td><span class="v" style="--c:#ffb457"><b>5.3 %</b><span><i style="width:5%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>142 s</b><span><i style="width:95%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>4.71</b><span><i style="width:28%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>211.9</b><span><i style="width:100%"></i></span></span></td><td><span class="v" style="--c:#ffb457"><b>167°</b><span><i style="width:93%"></i></span></span></td></tr></tbody>
+      </table>
+    </div>
+    <p class="swipe">표를 옆으로 밀어 나머지 열을 본다</p>
+    <div class="cost-notes"><div><b>감속 시간</b>성공한 시행의 중앙값이 로봇팔은 1.2~2.3 s, 그물·작살은 47~142 s 다. 강체로 붙잡으면 각운동량이 바로 넘어오지만, 테더는 윈치로 천천히 감속시킨다.</div><div><b>최대 충격량</b>로봇팔이 2.4~7.3 N·s 로 가장 작고, 작살 대형이 211.9 N·s 로 가장 크다. 그물 중형의 큰 충격은 성공·실패 시행에서 비슷해, 윈치가 대상을 끌어당겨 부딪히는 도킹 단계에서 생긴 것으로 본다.</div><div><b>서비스 위성 자세</b>중형 대상에서는 세 방식 모두 서비스 위성이 평균 140° 이상 돌아갔다. 대상의 각운동량이 옮겨 온 결과라, 방식을 고를 때 자세 제어 용량을 함께 따져야 한다.</div></div>
+  </section>
+  <section id="conclusion" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">결론</div>
+      <h2>회전 파편 포획에 정답 하나는 없다</h2>
+      <p>세 방식을 같은 물리 환경과 같은 판정 기준으로 4,320회,
+      회전축 추가 실험까지 비교해 얻은 다섯 가지다. 각 카드의 링크로 근거가 되는 결과와 장면을 바로 볼 수 있다.</p>
+    </div>
+    <div class="concl">
+      <article>
+        <div class="no">결론 1</div>
+        <h3>단일한 최적 포획 방식은 없다</h3>
+        <p>회전하는 대상에서 1위는 소형 로봇팔 88.2 % · 중형 그물 71.8 % · 대형 로봇팔 56.4 % 였다. 중형의 1·2위 차이 57.8 %p 는 회전축을 바꾸면 6.7~10.4 %p 로 줄어, 회전축도 방식을 고르는 변수다.</p>
+        <div class="ev"><a href="#results">핵심 결과</a></div>
+      </article>
+      <article>
+        <div class="no">결론 2</div>
+        <h3>방식마다 실패하는 이유가 다르다</h3>
+        <p>로봇팔은 태양전지판 같은 돌출 구조물에, 그물은 대상에 비해 작은 그물 크기에 막혔다. 작살은 대상에 박히는 데에는 대부분 성공했지만, 그 뒤 회전을 줄이지 못했다.</p>
+        <div class="ev"><a href="runs/arm_medium_10degs.html">▶ 로봇팔 · 중형 실패</a><a href="runs/net_large_10degs.html">▶ 그물 · 대형 실패</a></div>
+      </article>
+      <article>
+        <div class="no">결론 3</div>
+        <h3>성공 여부만으로는 부족하다</h3>
+        <p>성공해도 감속 시간이 로봇팔 1.2~2.3 s, 그물·작살 47~142 s 로 크게 달랐다. 중형에서 로봇팔과 작살은 성공률로는 구별되지 않았지만(p = 0.13) 잔류 각속도로는 작살이 6.17 deg/s 낮아 뚜렷이 갈렸다.</p>
+        <div class="ev"><a href="#costs">포획의 대가</a><a href="runs/arm_small_10degs.html">▶ 로봇팔 · 소형 성공</a></div>
+      </article>
+      <article>
+        <div class="no">결론 4</div>
+        <h3>빠를수록 어렵다는 직관은 방식에 따라 다르다</h3>
+        <p>중형 대상의 그물은 정지 53 % 에서 18 deg/s 90 % 로 오히려 올랐고, 소형 대상의 로봇팔은 14 deg/s 60 % 로 떨어졌다가 28 deg/s 97 % 로 회복했다.</p>
+        <div class="ev"><a href="#results">회전 속도별 곡선</a></div>
+      </article>
+      <article>
+        <div class="no">결론 5</div>
+        <h3>포획에는 서비스 위성 자세라는 대가가 따른다</h3>
+        <p>중형 대상에서는 세 방식 모두 서비스 위성이 평균 140° 이상 돌아갔다. 대상의 각운동량이 서비스 위성으로 옮겨 가므로, 방식을 고를 때 서비스 위성의 자세 제어 용량을 함께 따져야 한다.</p>
+        <div class="ev"><a href="runs/harpoon_medium_10degs.html">▶ 작살 · 중형 성공</a></div>
+      </article>
+    </div>
+    <p class="future"><b>후속 연구</b> 소형·대형 대상의 회전축 실험, 표면 마찰계수 실측, 윈치 장력 제어와 연성 도킹 최적화, 지상 실험을 통한 외부 검증</p>
+  </section>
   <section id="replays" class="wrap">
     <div class="sec-head">
       <div class="eyebrow">3D 리플레이</div>
@@ -261,6 +375,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
             <div><dt>잔류 상대 각속도</dt><dd>0.00 deg/s</dd></div>
             <div><dt>서비스 위성 최대 자세 변화</dt><dd>21°</dd></div>
           </dl>
+          <p class="run-note">강체로 붙잡아 첫 접촉 후 1.2 s 만에 감속했다. 그물·작살은 같은 감속에 수십~백수십 초가 걸린다 (결론 3).</p>
         </div>
       </a>
       <a class="run" href="runs/arm_medium_10degs.html" style="--c:#5fc9ff">
@@ -274,6 +389,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
             <div><dt>잔류 상대 각속도</dt><dd>9.19 deg/s</dd></div>
             <div><dt>서비스 위성 최대 자세 변화</dt><dd>180°</dd></div>
           </dl>
+          <p class="run-note">태양전지판이 서비스 위성과 먼저 부딪혀 파지 단계에 들어가지 못했다. 돌출 구조물이 로봇팔의 약점이다 (결론 2).</p>
         </div>
       </a>
       <a class="run" href="runs/net_medium_10degs.html" style="--c:#86e07f">
@@ -287,6 +403,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
             <div><dt>잔류 상대 각속도</dt><dd>0.69 deg/s</dd></div>
             <div><dt>서비스 위성 최대 자세 변화</dt><dd>2°</dd></div>
           </dl>
+          <p class="run-note">형상과 상관없이 감쌀 수 있는 그물은 태양전지판에 걸려 오히려 유리하다. 중형에서 그물이 1위인 이유다.</p>
         </div>
       </a>
       <a class="run" href="runs/harpoon_medium_10degs.html" style="--c:#ffb457">
@@ -300,11 +417,42 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
             <div><dt>잔류 상대 각속도</dt><dd>0.48 deg/s</dd></div>
             <div><dt>서비스 위성 최대 자세 변화</dt><dd>180°</dd></div>
           </dl>
+          <p class="run-note">포획에는 성공했지만 서비스 위성이 180° 돌아갔다. 대상의 각운동량이 옮겨 온 결과로, 포획의 대가다 (결론 5).</p>
+        </div>
+      </a>
+      <a class="run" href="runs/net_large_10degs.html" style="--c:#86e07f">
+        <div class="thumb"><img src="assets/thumbs/net_large_10degs.jpg" alt="그물 · 대형 2,000 kg 포획 장면" loading="lazy"><span class="badge no">포획 실패</span><span class="playbtn" aria-hidden="true">▶</span></div>
+        <div class="run-body">
+          <h3><i></i>그물 · 대형 2,000 kg</h3>
+          <div class="sub">회전 10 deg/s · 시드 1000 · 40 s 재생</div>
+          <dl class="stats">
+            <div><dt>감속 시간</dt><dd>—</dd></div>
+            <div><dt>최대 충격량</dt><dd>0.5 N·s</dd></div>
+            <div><dt>잔류 상대 각속도</dt><dd>10.10 deg/s</dd></div>
+            <div><dt>서비스 위성 최대 자세 변화</dt><dd>18°</dd></div>
+          </dl>
+          <p class="run-note">한 변 5 m 그물이 지름 2 m·길이 3 m 원통을 감싸지 못해 붙은 지 1.6 s 만에 벗겨졌다. 대형에서 그물이 0 %인 이유다 (결론 2). 장면은 앞 40 s 만 기록했다.</p>
         </div>
       </a>
     </div>
   </section>
 
+  <section id="method" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">실험 조건과 한계</div>
+      <h2>무엇을 어떻게 비교했고, 어디까지 말할 수 있나</h2>
+    </div>
+    <div class="method">
+      <div>
+        <h3>실험 조건</h3>
+        <dl class="spec"><dt>궤도 환경</dt><dd>고도 500 km 원궤도의 LVLH 좌표계. Clohessy–Wiltshire 상대 운동과 중력구배 토크를 매 스텝 부여</dd><dt>물리 엔진</dt><dd>PyBullet 다물체 동역학 · 적분 간격 1/480 s · 시행당 최대 180 s · 각감쇠 0 (각운동량 보존)</dd><dt>서비스 위성</dt><dd>1,000 kg · 한 변 1.5 m 정육면체 · x 방향에서 접근</dd><dt>대상</dt><dd>소형 한 변 0.3 m 정육면체 10 kg · 중형 본체와 좌우 2 m 태양전지판 500 kg · 대형 반지름 1 m·길이 3 m 원통 2,000 kg</dd><dt>회전</dt><dd>0~30 deg/s, 2 deg/s 간격 16 단계 · 접근축에 수직인 z 축 주축 회전 (중형은 x·y 축 추가)</dd><dt>로봇팔</dt><dd>6 관절, 도달 거리 2.6 m · 예비 접근 → 대기 → 파지 3 단계 · 순응 파지</dd><dt>그물</dt><dd>9 × 9 질점, 인장 전용 스프링 · 한 변 2 / 7 / 5 m (소형 / 중형 / 대형) · 접촉 후 둘레를 조이고 윈치로 감속</dd><dt>작살</dt><dd>2 kg, 12 m/s (RemoveDEBRIS 실증값 20 m/s 보다 보수적) · 관통 후 테더 윈치로 감속</dd><dt>불확실성</dt><dd>표준편차 회전축 10° · 회전 속도 5 % · 상대 위치 0.1 m · 상대 속도 0.02 m/s · 지향 1° · 초기 자세 10°</dd><dt>반복</dt><dd>조합당 30 회 (같은 반복 번호는 모든 조합이 같은 시드) · 총 4,320 회 + 회전축 추가 2,700 회</dd><dt>통계</dt><dd>Wilson 95 % 신뢰구간 · McNemar 정확검정 · Wilcoxon 부호순위 검정 · Holm–Bonferroni 보정</dd><dt>수치 검증</dt><dd>토크 없는 회전을 Runge–Kutta 해와 비교 (상대 오차 7 × 10⁻⁴) · 적분 간격 1/480·1/960·1/1920 s 수렴 시험</dd></dl>
+      </div>
+      <div>
+        <h3>연구의 한계</h3>
+        <ol class="limits"><li><b>가정값의 근거.</b> 상당수가 문헌 근거 없이 정해졌다. 민감도 분석에서 결론을 가장 크게 흔든 값은 로봇팔의 그리퍼 접근 속도와 표면 마찰계수이며, 마찰계수는 실측으로 확정해야 한다.</li><li><b>구현체 비교.</b> 비교한 것은 세 방식 일반이 아니라 이 연구의 구현체다. 그물·작살의 성능은 윈치와 그물 크기 설계에 크게 좌우된다.</li><li><b>회전축.</b> 세 주축을 모두 실험한 것은 중형 대상뿐이다. 소형·대형의 결론은 z 축 회전에서 얻었다.</li><li><b>외부 검증.</b> 검증은 내부 일관성 확인에 해당한다. 지상 실험이나 궤도 실증 자료와의 비교가 필요하다.</li><li><b>작살 관통.</b> 임계 속도·입사각 규칙으로 판정하며 재료의 파괴 역학은 다루지 않는다.</li></ol>
+      </div>
+    </div>
+  </section>
   <section id="guide" class="wrap">
     <div class="guide">
       <div>
@@ -321,6 +469,12 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
         3 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
         뷰어 그래프의 가로 점선이 이 기준이고, 초록 음영은 결합이 유지된 구간이다.
         감속 시간은 첫 접촉부터 상대 각속도가 기준 아래로 내려갈 때까지 걸린 시간이다.
+      </div>
+      <div>
+        <h3>휴대폰으로 보기</h3>
+        <div class="qr"><img src="assets/site_qr.svg" alt="이 사이트 주소 QR 코드" width="112" height="112"><div>
+        한 손가락으로 끌면 장면이 돌아가고, 두 손가락을 오므리거나 벌리면 축소·확대된다.
+        휴대폰을 가로로 돌리면 장면이 넓게 보인다. 리플레이 하나는 1~4 MB 라 처음 열 때 잠시 걸릴 수 있다.</div></div>
       </div>
     </div>
   </section>

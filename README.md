@@ -49,7 +49,7 @@ python capture_sim.py --method arm --target medium --spin 10
 | [.github/workflows/pages.yml](.github/workflows/pages.yml) | `site/` 를 GitHub Pages 로 배포 |
 | [viewer_template.html](viewer_template.html) | 웹 3D 리플레이 뷰어의 UI 틀 |
 | `assets/` | 지구 텍스처(NASA Blue Marble), 뷰어에 내장할 three.js |
-| `demo/` | 샘플 리플레이 4개(중형은 세 방식 모두). 인터넷 없이 더블클릭으로 열리는 단독 HTML 이라 발표 비상용으로 쓴다 |
+| `demo/` | 샘플 리플레이 5개(중형은 세 방식 모두, 대형 그물 실패 장면 포함). 인터넷 없이 더블클릭으로 열리는 단독 HTML 이라 발표 비상용으로 쓴다 |
 | `manuscript/` | 학술대회 원고(제출용·전체판), 그림, 확인 완료된 참고문헌 |
 
 실험 결과(`results/` `comparison/` `verification/` `sensitivity/` `results_axis/` `report/`)는 저장소에 함께 보관한다.
@@ -288,12 +288,17 @@ python build_site.py --inputs a.json b.html --out site
 궤적 JSON(`--trajectory`)을 직접 줘도 된다.
 
 첫 화면은 발표용으로 꾸몄다. 연구 소개와 실험 규모, 대상별 회전 속도-성공률 곡선(핵심 결과),
-회전축 추가 실험 카드, 썸네일이 붙은 리플레이 목록 순서다. 핵심 결과는 `results/results_summary.csv` 에서,
+회전축 추가 실험 카드, 포획의 대가 표, 결론 다섯 가지, 썸네일이 붙은 리플레이 목록, 실험 조건과 한계, 보는 법 순서다. 핵심 결과는 `results/results_summary.csv` 에서,
 회전축 카드는 `results_axis/axis_summary.csv`·`axis_tests.csv` 에서 그린다. 원고 요약문과 같은 기준(회전하는 대상만
 집계)이라 수치가 원고와 일치한다. CSV 가 없으면 그 절만 빠진다. 리플레이는 대상 → 방식 순으로 놓여
 중형 위성에서 로봇팔(실패)·그물·작살이 나란히 비교된다.
 오해받기 쉬운 결과에는 원고와 같은 해설을 카드에 단다(`RESULT_NOTES`). 지금은 대형 대상의 그물 0 % 에
 "정지 대상에서도 0 % — 그물 크기의 한계" 를 붙이며, 자료가 그 문장과 맞지 않게 바뀌면 빌드가 해설을 빼고 알린다.
+포획의 대가 표는 감속 시간·잔류 각속도·최대 충격량·서비스 위성 자세 변화를 원고 표 2·3 과 같은 기준으로
+`results/results_summary.csv` 와 `results/results_raw.csv` 에서 다시 계산한다. 결론 카드의 숫자도 자료에서 계산하고,
+근거가 되는 절과 리플레이로 가는 링크를 단다. 실험 조건과 한계(`METHOD_SPEC`·`LIMITS`)는 원고 표 1·4.7 절을
+옮긴 글이라 원고를 고치면 같이 고친다. 리플레이 카드의 해설 한 줄(`run_note`)은 장면 자료가 해설의 전제와 맞을 때만 붙는다.
+`assets/site_qr.svg`(사이트 주소 QR)가 있으면 '휴대폰으로 보기' 칸에 붙는다. 슬라이드에는 `assets/site_qr.png` 를 쓴다.
 팀 이름과 팀원은 `TEAM` 에 있다. 공군사관학교 마크는 `assets/afa_emblem.png`(또는 .svg·.webp·.jpg)를 두면
 팀 소개 옆에 붙는다.
 썸네일은 헤드리스 브라우저로 각 뷰어를 `?clean&nodes=0.3&t=첫 접촉+2.5초` 로 열어 찍는다.
@@ -305,12 +310,17 @@ python build_site.py --inputs a.json b.html --out site
 미리보기 그림은 절대 주소여야 하므로 GitHub Pages 가 아닌 곳에 올리면 `--site-url` 을 준다.
 
 **발표 비상용.** 행사장 인터넷이 막히거나 느리면 `demo/` 폴더를 통째로 USB 에 담아 가서 HTML 을 더블클릭한다.
-three.js·지구 텍스처·궤적이 파일 안에 들어 있고, 위쪽 막대로 네 시나리오를 오갈 수 있다. 발표 모드·사건 알림도 그대로다.
+three.js·지구 텍스처·궤적이 파일 안에 들어 있고, 위쪽 막대로 다섯 시나리오를 오갈 수 있다. 발표 모드·사건 알림도 그대로다.
 한글 글꼴만 인터넷이 없으면 맑은 고딕으로 바뀐다. 뷰어 템플릿을 고쳤다면 `--standalone demo` 로 다시 만든다.
+대형 그물 실패 장면은 그물 질점이 많아 180 s 를 다 기록하면 파일이 커지므로 앞 40 s 만 기록했다. 그물이 붙었다가 벗겨지는 장면은 3 초 안에 끝난다.
+
+```bash
+python capture_sim.py --method net --target large --spin 10 --seed 1000 --max-time 40 --viewer demo/net_large_10degs.html
+```
 
 ```
 site/
-  index.html             첫 화면 (연구 소개 · 핵심 결과 · 리플레이 목록)
+  index.html             첫 화면 (연구 소개 · 핵심 결과 · 포획의 대가 · 결론 · 리플레이 · 조건과 한계)
   runs/<이름>.html        뷰어. 공유 자산을 참조하고, 위쪽에 첫 화면과 다른 시나리오로 가는 길이 붙는다
   data/<이름>.js          궤적 자료
   assets/                 three.min.js, earth.jpg (한 번만 올라간다)

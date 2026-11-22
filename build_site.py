@@ -48,9 +48,11 @@ import csv
 import glob
 import html
 import json
+import math
 import os
 import re
 import shutil
+import statistics
 from typing import Dict, List, Optional
 from urllib.parse import quote
 
@@ -84,6 +86,33 @@ RESULT_NOTES = {
                        "text": "그물 0 %는 회전하지 않는 대상에서도 0 %다. 한 변 5 m 그물이 지름 2 m·길이 3 m 원통"
                                "(외접 지름 3.6 m)을 감싸지 못한 그물 크기의 한계이며, 더 큰 그물로는 달라질 수 있다."},
 }
+# 실험 조건과 연구의 한계. 원고 표 1·2.3 절·3 장·4.7 절과 같은 내용이다 (값은 capture_sim.CONFIG 와 맞춰 확인했다).
+# 원고를 고치면 여기도 같이 고친다
+METHOD_SPEC = [
+    ("궤도 환경", "고도 500 km 원궤도의 LVLH 좌표계. Clohessy–Wiltshire 상대 운동과 중력구배 토크를 매 스텝 부여"),
+    ("물리 엔진", "PyBullet 다물체 동역학 · 적분 간격 1/480 s · 시행당 최대 180 s · 각감쇠 0 (각운동량 보존)"),
+    ("서비스 위성", "1,000 kg · 한 변 1.5 m 정육면체 · x 방향에서 접근"),
+    ("대상", "소형 한 변 0.3 m 정육면체 10 kg · 중형 본체와 좌우 2 m 태양전지판 500 kg · 대형 반지름 1 m·길이 3 m 원통 2,000 kg"),
+    ("회전", "0~30 deg/s, 2 deg/s 간격 16 단계 · 접근축에 수직인 z 축 주축 회전 (중형은 x·y 축 추가)"),
+    ("로봇팔", "6 관절, 도달 거리 2.6 m · 예비 접근 → 대기 → 파지 3 단계 · 순응 파지"),
+    ("그물", "9 × 9 질점, 인장 전용 스프링 · 한 변 2 / 7 / 5 m (소형 / 중형 / 대형) · 접촉 후 둘레를 조이고 윈치로 감속"),
+    ("작살", "2 kg, 12 m/s (RemoveDEBRIS 실증값 20 m/s 보다 보수적) · 관통 후 테더 윈치로 감속"),
+    ("불확실성", "표준편차 회전축 10° · 회전 속도 5 % · 상대 위치 0.1 m · 상대 속도 0.02 m/s · 지향 1° · 초기 자세 10°"),
+    ("반복", "조합당 30 회 (같은 반복 번호는 모든 조합이 같은 시드) · 총 4,320 회 + 회전축 추가 2,700 회"),
+    ("통계", "Wilson 95 % 신뢰구간 · McNemar 정확검정 · Wilcoxon 부호순위 검정 · Holm–Bonferroni 보정"),
+    ("수치 검증", "토크 없는 회전을 Runge–Kutta 해와 비교 (상대 오차 7 × 10⁻⁴) · 적분 간격 1/480·1/960·1/1920 s 수렴 시험"),
+]
+LIMITS = [
+    ("가정값의 근거", "상당수가 문헌 근거 없이 정해졌다. 민감도 분석에서 결론을 가장 크게 흔든 값은 로봇팔의 그리퍼 접근 속도와 "
+                     "표면 마찰계수이며, 마찰계수는 실측으로 확정해야 한다."),
+    ("구현체 비교", "비교한 것은 세 방식 일반이 아니라 이 연구의 구현체다. 그물·작살의 성능은 윈치와 그물 크기 설계에 크게 좌우된다."),
+    ("회전축", "세 주축을 모두 실험한 것은 중형 대상뿐이다. 소형·대형의 결론은 z 축 회전에서 얻었다."),
+    ("외부 검증", "검증은 내부 일관성 확인에 해당한다. 지상 실험이나 궤도 실증 자료와의 비교가 필요하다."),
+    ("작살 관통", "임계 속도·입사각 규칙으로 판정하며 재료의 파괴 역학은 다루지 않는다."),
+]
+FUTURE_WORK = "소형·대형 대상의 회전축 실험, 표면 마찰계수 실측, 윈치 장력 제어와 연성 도킹 최적화, 지상 실험을 통한 외부 검증"
+# 슬라이드와 첫 화면의 '휴대폰으로 보기' 에 쓰는 사이트 주소 QR 코드. assets/ 에 있을 때만 붙는다
+QR_NAME = "site_qr.svg"
 # 회전축 추가 실험(중형 대상). 축 설명은 README 의 회전축 표와 같다
 AXIS_ORDER = ["z", "x", "y"]
 AXIS_DESC = {"z": "본 실험 · 최대 관성축", "x": "접근축 방향 · 중간 관성축", "y": "태양전지판 방향 · 최소 관성축"}
@@ -338,7 +367,59 @@ section.wrap{padding-top:88px;scroll-margin-top:-60px}
 .axis-gap{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px}
 .axis-gap b{color:var(--text);font-family:var(--mono);font-weight:500}
 .axis-gap .ns{color:var(--warn)}
-.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+.tbl-wrap{overflow-x:auto;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.cost{width:100%;min-width:820px;border-collapse:collapse;font-size:14px}
+.cost th{padding:14px 14px 10px;text-align:left;color:var(--muted);font-size:12.5px;font-weight:600;vertical-align:bottom;
+border-bottom:1px solid var(--line2);white-space:nowrap}
+.cost th small{display:block;color:var(--dim);font-size:11.5px;font-weight:500}
+.cost td{padding:8px 14px;border-bottom:1px solid var(--line)}
+.cost tbody tr:last-child td{border-bottom:0}
+.cost tr.first td{border-top:1px solid var(--line2)}
+.cost tbody tr:first-child td{border-top:0}
+.cost .tg{vertical-align:top;padding-top:12px;font-weight:700;white-space:nowrap}
+.cost .tg span{display:block;color:var(--muted);font-size:12px;font-weight:500}
+.cost .m{display:flex;align-items:center;gap:8px;white-space:nowrap;color:var(--muted)}
+.cost .m i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.cost .m em{padding:1px 6px;border-radius:5px;background:var(--c);color:#03111b;font-size:11px;font-style:normal;font-weight:700}
+.cost .win .m{color:var(--text);font-weight:600}
+.v{display:grid;grid-template-columns:64px minmax(40px,1fr);align-items:center;gap:10px}
+.v b{text-align:right;font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v>span{height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+.v>span i{display:block;height:100%;border-radius:3px;background:var(--c);opacity:.75}
+.v.na b{color:var(--dim);font-family:var(--font);font-size:12.5px}
+.v.na>span{background:none}
+.swipe{display:none;margin:8px 0 0;color:var(--dim);font-size:12.5px}
+.cost-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:16px}
+.cost-notes div{padding:15px 18px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.025);
+color:var(--muted);font-size:13.5px;line-height:1.7}
+.cost-notes b{display:block;margin-bottom:3px;color:var(--text);font-size:14px}
+
+.concl{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.concl article{display:flex;flex-direction:column;padding:20px 22px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.concl .no{font-size:12.5px;font-weight:600;color:var(--accent);letter-spacing:.02em}
+.concl h3{margin:6px 0 8px;font-size:17.5px;font-weight:700;letter-spacing:-.02em;line-height:1.4;text-wrap:balance}
+.concl p{margin:0;color:var(--muted);font-size:14px;line-height:1.75}
+.ev{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:14px}
+.ev a{padding:4px 11px;border-radius:999px;border:1px solid var(--line2);font-size:12.5px;text-decoration:none;transition:border-color .15s}
+.ev a:hover{border-color:var(--accent)}
+.future{margin:18px 0 0;color:var(--muted);font-size:14px;line-height:1.7}
+.future b{margin-right:8px;color:var(--text)}
+
+.method{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.method>div{padding:20px 22px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.method h3{margin:0 0 14px;font-size:16px;font-weight:700}
+.spec{display:grid;grid-template-columns:92px minmax(0,1fr);gap:9px 16px;margin:0;font-size:13.5px;line-height:1.6}
+.spec dt{color:var(--muted)}
+.spec dd{margin:0}
+.limits{margin:0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.7}
+.limits li{margin-bottom:10px}
+.limits li::marker{color:var(--dim)}
+.limits b{color:var(--text);font-weight:600}
+.run-note{margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px;line-height:1.65}
+.qr{display:flex;gap:16px;align-items:flex-start}
+.qr img{flex:none;width:112px;height:112px;padding:6px;border-radius:10px;background:#fff}
 
 .run{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;background:var(--panel);border:1px solid var(--line);
 text-decoration:none;transition:border-color .2s,transform .2s,box-shadow .2s}
@@ -366,9 +447,12 @@ background:rgba(4,7,14,.76);backdrop-filter:blur(6px);-webkit-backdrop-filter:bl
 .guide h3{margin:0 0 8px;color:var(--text);font-size:15px;font-weight:700}
 kbd{padding:1px 6px;border-radius:5px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);font-family:var(--mono);font-size:12px}
 footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px solid var(--line);color:var(--dim);font-size:12.5px}
-@media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;gap:36px;padding-top:8px}}
+@media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;gap:36px;padding-top:8px}
+.method{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:860px){.swipe{display:block}}
 @media (max-width:640px){.wrap{padding:0 16px}.topbar nav{display:none}.facts>div{flex:1 1 40%}section.wrap{padding-top:56px}
-.res-rate{font-size:34px}}
+.res-rate{font-size:34px}.spec{grid-template-columns:minmax(0,1fr);gap:0}.spec dd{margin-bottom:10px}.qr img{display:none}
+.cost{min-width:0;font-size:13px}.cost th,.cost td{padding:8px 9px}.cost .tg span,.v>span,.cost th small{display:none}.v{display:block}.cost .m em{display:none}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 """
 
@@ -545,8 +629,264 @@ def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
   </section>"""
 
 
+def _num(v) -> Optional[float]:
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    return x if x == x else None                    # NaN 은 없는 값으로 본다
+
+
+def load_costs(summary_path: str, raw_path: str) -> Optional[Dict]:
+    """성공률 밖의 지표를 원고와 같은 기준으로 계산한다. 두 파일 중 하나라도 없으면 None.
+    잔류 각속도·최대 충격량·서비스 위성 자세 변화는 원고 표 2 기준이다: 정지를 포함한 회전 속도 16 칸에서
+    잔류 각속도는 칸 중앙값들의 중앙값(위쪽), 충격량과 자세 변화는 칸 평균들의 평균.
+    감속 시간은 원고 표 3 기준이다: 회전 대상(> 0 deg/s)에서 성공한 시행의 중앙값."""
+    if not (os.path.exists(summary_path) and os.path.exists(raw_path)):
+        return None
+    cells: Dict = {}
+    with open(summary_path, encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            cells.setdefault((row["target"], row["method"]), []).append(row)
+    times: Dict = {}
+    with open(raw_path, encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            ct = _num(row.get("capture_time"))
+            if (_num(row["spin_deg_s"]) or 0) > 0 and row["success"].strip().lower() in ("true", "1") and ct is not None:
+                times.setdefault((row["target"], row["method"]), []).append(ct)
+    out = {}
+    for key, g in cells.items():
+        rel = sorted(v for v in (_num(r["final_rel_omega_median_deg_s"]) for r in g) if v is not None)
+        imp = [v for v in (_num(r["impulse_mean_Ns"]) for r in g) if v is not None]
+        att = [v for v in (_num(r["servicer_attitude_error_mean_deg"]) for r in g) if v is not None]
+        t = times.get(key, [])
+        out[key] = {"capture": statistics.median(t) if t else None, "n_capture": len(t),
+                    "rel": rel[len(rel) // 2] if rel else None,
+                    "impulse": sum(imp) / len(imp) if imp else None,
+                    "attitude": sum(att) / len(att) if att else None}
+    return out
+
+
+def keep_units(text: str) -> str:
+    """숫자와 단위 사이를 줄바꿈 없는 공백으로 바꿔 '57.8' 과 '%p' 가 다른 줄로 갈라지지 않게 한다."""
+    return re.sub(r"(\d) (%p|%|deg/s|N·s|s\b)", "\\1\u00a0\\2", text)
+
+
+def rate_at(curves: Dict, target: str, method: str, spin: float) -> Optional[float]:
+    return next((p["rate"] for p in curves.get((target, method), []) if abs(p["spin"] - spin) < 1e-9), None)
+
+
+def build_costs(curves: Dict, costs: Dict) -> str:
+    """'포획의 대가' 절: 대상·방식별 성공률, 감속 시간, 잔류 각속도, 최대 충격량, 서비스 위성 자세 변화 표.
+    값 옆 막대는 같은 열 안에서 비교하라는 표시다. 감속 시간은 초와 분이 섞여 로그 눈금으로 그린다."""
+    max_time = float(CONFIG["sim"]["max_time"]) if CONFIG is not None else 180.0
+    present = [(t, m) for t in TARGET_ORDER for m in METHOD_ORDER if (t, m) in costs]
+    if not present:
+        return ""
+    top = lambda k: max((costs[x][k] or 0) for x in present) or 1.0
+    imp_max, rel_max = top("impulse"), top("rel")
+
+    def cell(v, frac, fmt, c):
+        if v is None:
+            return '<td><span class="v na"><b>—</b><span></span></span></td>'
+        return (f'<td><span class="v" style="--c:{c}"><b>{fmt.format(v)}</b>'
+                f'<span><i style="width:{max(0.02, min(frac, 1.0)) * 100:.0f}%"></i></span></span></td>')
+
+    body = []
+    for t in TARGET_ORDER:
+        rank = target_ranking(curves, t) if curves else []
+        rates = {m: r for m, r, _ in rank}
+        winner = rank[0][0] if rank else None
+        ms = [m for m in METHOD_ORDER if (t, m) in costs]
+        for i, m in enumerate(ms):
+            c, x = METHOD_COLORS[m], costs[(t, m)]
+            ct = x["capture"]
+            tg = (f'<td class="tg" rowspan="{len(ms)}">{TARGET_DESC[t][0]}<span>{TARGET_DESC[t][1]}</span></td>' if i == 0 else "")
+            rate = rates.get(m)
+            body.append(
+                f'<tr class="{"first " if i == 0 else ""}{"win" if m == winner else ""}">{tg}'
+                f'<td><span class="m" style="--c:{c}"><i></i>{METHOD_LABELS[m]}{" <em>1위</em>" if m == winner else ""}</span></td>'
+                + cell(rate * 100 if rate is not None else None, rate or 0, "{:.1f} %", c)
+                + (cell(ct, math.log10(max(ct, 1.0)) / math.log10(max_time), "{:.1f} s" if ct < 10 else "{:.0f} s", c)
+                   if ct is not None else '<td><span class="v na"><b>성공 없음</b><span></span></span></td>')
+                + cell(x["rel"], (x["rel"] or 0) / rel_max, "{:.2f}", c)
+                + cell(x["impulse"], (x["impulse"] or 0) / imp_max, "{:.1f}", c)
+                + cell(x["attitude"], (x["attitude"] or 0) / 180.0, "{:.0f}°", c)
+                + "</tr>")
+
+    # 표 아래 세 줄 요약. 문장의 숫자는 모두 위 표에서 다시 계산한다
+    notes = []
+    arm_ct = [costs[(t, "arm")]["capture"] for t in TARGET_ORDER if (t, "arm") in costs and costs[(t, "arm")]["capture"]]
+    teth_ct = [costs[(t, m)]["capture"] for t in TARGET_ORDER for m in ("net", "harpoon")
+               if (t, m) in costs and costs[(t, m)]["capture"]]
+    if arm_ct and teth_ct:
+        notes.append(("감속 시간", f"성공한 시행의 중앙값이 로봇팔은 {min(arm_ct):.1f}~{max(arm_ct):.1f} s, "
+                                  f"그물·작살은 {min(teth_ct):.0f}~{max(teth_ct):.0f} s 다. 강체로 붙잡으면 각운동량이 바로 넘어오지만, "
+                                  f"테더는 윈치로 천천히 감속시킨다."))
+    arm_imp = [costs[(t, "arm")]["impulse"] for t in TARGET_ORDER if (t, "arm") in costs]
+    worst = max(present, key=lambda k: costs[k]["impulse"] or 0)
+    if arm_imp:
+        notes.append(("최대 충격량", f"로봇팔이 {min(arm_imp):.1f}~{max(arm_imp):.1f} N·s 로 가장 작고, "
+                                    f"{METHOD_LABELS[worst[1]]} {TARGET_DESC[worst[0]][0]}이 {costs[worst]['impulse']:.1f} N·s 로 가장 크다. "
+                                    f"그물 중형의 큰 충격은 성공·실패 시행에서 비슷해, 윈치가 대상을 끌어당겨 부딪히는 도킹 단계에서 생긴 것으로 본다."))
+    med = [costs[("medium", m)]["attitude"] for m in METHOD_ORDER if ("medium", m) in costs]
+    if len(med) == len(METHOD_ORDER):
+        notes.append(("서비스 위성 자세", f"중형 대상에서는 세 방식 모두 서비스 위성이 평균 {min(med):.0f}° 이상 돌아갔다. "
+                                         f"대상의 각운동량이 옮겨 온 결과라, 방식을 고를 때 자세 제어 용량을 함께 따져야 한다."))
+    note_html = "".join(f"<div><b>{h}</b>{html.escape(keep_units(s))}</div>" for h, s in notes)
+    return f"""
+  <section id="costs" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">포획의 대가</div>
+      <h2>성공해도 감속에 걸리는 시간은 초 단위와 분 단위로 갈린다</h2>
+      <p>포획은 성공 여부만으로 끝나지 않는다. 성공률을 뺀 네 지표는 막대가 짧을수록 좋다.
+      감속 시간은 회전 대상에서 성공한 시행의 중앙값(로그 눈금), 잔류 상대 각속도는 중앙값,
+      최대 충격량과 서비스 위성 자세 변화는 정지를 포함한 전체 시행의 평균이다. 원고 표 2·3 과 같은 기준이다.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table class="cost">
+        <thead><tr><th>대상</th><th>방식</th><th>회전 대상 성공률<small>높을수록 좋다</small></th><th>감속 시간<small>성공 시행 중앙값</small></th>
+        <th>잔류 상대 각속도<small>deg/s</small></th><th>최대 충격량<small>N·s</small></th><th>서비스 위성 자세 변화<small>평균</small></th></tr></thead>
+        <tbody>{"".join(body)}</tbody>
+      </table>
+    </div>
+    <p class="swipe">표를 옆으로 밀어 나머지 열을 본다</p>
+    <div class="cost-notes">{note_html}</div>
+  </section>"""
+
+
+def build_conclusions(curves: Dict, costs: Optional[Dict], axis: Optional[Dict], runs: List[Dict]) -> str:
+    """결론 다섯 가지 (원고 4.8 절). 숫자는 자료에서 다시 계산하고, 근거가 되는 절과 리플레이로 가는 길을 단다."""
+    have = {run_kind(r): r["name"] for r in runs}
+    link = lambda m, t, label: (f'<a href="runs/{html.escape(have[(m, t)])}.html">▶ {label}</a>' if (m, t) in have else "")
+    items = []
+
+    # 1. 대상마다 1위가 다르다
+    wins = {t: target_ranking(curves, t)[0] for t in TARGET_ORDER if target_ranking(curves, t)}
+    if wins:
+        same = len({w[0] for w in wins.values()}) == 1
+        body = " · ".join(f"{TARGET_DESC[t][0]} {METHOD_LABELS[m]} {r * 100:.1f} %" for t, (m, r, _) in wins.items())
+        body = f"회전하는 대상에서 1위는 {body} 였다."
+        if axis:
+            gaps = {}
+            for ax in AXIS_ORDER:
+                r = axis["rates"].get(ax)
+                if r and len(r) >= 2:
+                    top2 = sorted((v[0] for v in r.values()), reverse=True)[:2]
+                    gaps[ax] = (top2[0] - top2[1]) * 100
+            others = [g for ax, g in gaps.items() if ax != "z"]
+            if "z" in gaps and others and max(others) < gaps["z"]:
+                body += (f" 중형의 1·2위 차이 {gaps['z']:.1f} %p 는 회전축을 바꾸면 {min(others):.1f}~{max(others):.1f} %p 로 "
+                         "줄어, 회전축도 방식을 고르는 변수다.")
+        items.append(("대상마다 유효한 방식이 다르다" if same else "단일한 최적 포획 방식은 없다", body,
+                      '<a href="#results">핵심 결과</a>'))
+
+    # 2. 실패 이유
+    items.append(("방식마다 실패하는 이유가 다르다",
+                  "로봇팔은 태양전지판 같은 돌출 구조물에, 그물은 대상에 비해 작은 그물 크기에 막혔다. "
+                  "작살은 대상에 박히는 데에는 대부분 성공했지만, 그 뒤 회전을 줄이지 못했다.",
+                  link("arm", "medium", "로봇팔 · 중형 실패") + link("net", "large", "그물 · 대형 실패")))
+
+    # 3. 성공 여부만으로는 부족하다
+    body = "중형에서 로봇팔과 작살은 성공률로는 구별되지 않았지만(p = 0.13) 잔류 각속도로는 작살이 6.17 deg/s 낮아 뚜렷이 갈렸다."
+    if costs:
+        arm_ct = [costs[(t, "arm")]["capture"] for t in TARGET_ORDER if costs.get((t, "arm"), {}).get("capture")]
+        teth = [costs[(t, m)]["capture"] for t in TARGET_ORDER for m in ("net", "harpoon") if costs.get((t, m), {}).get("capture")]
+        if arm_ct and teth:
+            body = (f"성공해도 감속 시간이 로봇팔 {min(arm_ct):.1f}~{max(arm_ct):.1f} s, 그물·작살 {min(teth):.0f}~{max(teth):.0f} s 로 "
+                    "크게 달랐다. " + body)
+    items.append(("성공 여부만으로는 부족하다", body,
+                  ('<a href="#costs">포획의 대가</a>' if costs else "") + link("arm", "small", "로봇팔 · 소형 성공")))
+
+    # 4. 빠를수록 어렵다는 직관이 깨진다
+    a, b = rate_at(curves, "medium", "net", 0), rate_at(curves, "medium", "net", 18)
+    c, d = rate_at(curves, "small", "arm", 14), rate_at(curves, "small", "arm", 28)
+    body = "회전이 빠를수록 포획이 어렵다는 직관은 방식에 따라 성립하지 않았다."
+    if None not in (a, b, c, d) and b > a and d > c:
+        body = (f"중형 대상의 그물은 정지 {a * 100:.0f} % 에서 18 deg/s {b * 100:.0f} % 로 오히려 올랐고, "
+                f"소형 대상의 로봇팔은 14 deg/s {c * 100:.0f} % 로 떨어졌다가 28 deg/s {d * 100:.0f} % 로 회복했다.")
+    items.append(("빠를수록 어렵다는 직관은 방식에 따라 다르다", body, '<a href="#results">회전 속도별 곡선</a>'))
+
+    # 5. 서비스 위성 자세
+    med = [costs[("medium", m)]["attitude"] for m in METHOD_ORDER if costs and ("medium", m) in costs]
+    body = "대상의 각운동량이 서비스 위성으로 옮겨 가므로, 방식을 고를 때 서비스 위성의 자세 제어 용량을 함께 따져야 한다."
+    if len(med) == len(METHOD_ORDER):
+        body = f"중형 대상에서는 세 방식 모두 서비스 위성이 평균 {min(med):.0f}° 이상 돌아갔다. " + body
+    items.append(("포획에는 서비스 위성 자세라는 대가가 따른다", body, link("harpoon", "medium", "작살 · 중형 성공")))
+
+    cards = "".join(f"""
+      <article>
+        <div class="no">결론 {i}</div>
+        <h3>{h}</h3>
+        <p>{html.escape(keep_units(b))}</p>
+        {f'<div class="ev">{ev}</div>' if ev else ''}
+      </article>""" for i, (h, b, ev) in enumerate(items, 1))
+    return f"""
+  <section id="conclusion" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">결론</div>
+      <h2>회전 파편 포획에 정답 하나는 없다</h2>
+      <p>세 방식을 같은 물리 환경과 같은 판정 기준으로 {sum(p["n"] for pts in curves.values() for p in pts):,}회,
+      회전축 추가 실험까지 비교해 얻은 다섯 가지다. 각 카드의 링크로 근거가 되는 결과와 장면을 바로 볼 수 있다.</p>
+    </div>
+    <div class="concl">{cards}
+    </div>
+    <p class="future"><b>후속 연구</b> {html.escape(FUTURE_WORK)}</p>
+  </section>"""
+
+
+def build_method() -> str:
+    spec = "".join(f"<dt>{html.escape(k)}</dt><dd>{html.escape(v)}</dd>" for k, v in METHOD_SPEC)
+    lims = "".join(f"<li><b>{html.escape(k)}.</b> {html.escape(v)}</li>" for k, v in LIMITS)
+    return f"""
+  <section id="method" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">실험 조건과 한계</div>
+      <h2>무엇을 어떻게 비교했고, 어디까지 말할 수 있나</h2>
+    </div>
+    <div class="method">
+      <div>
+        <h3>실험 조건</h3>
+        <dl class="spec">{spec}</dl>
+      </div>
+      <div>
+        <h3>연구의 한계</h3>
+        <ol class="limits">{lims}</ol>
+      </div>
+    </div>
+  </section>"""
+
+
+def run_note(r: Dict) -> Optional[str]:
+    """리플레이 카드의 해설 한 줄. 장면을 원고의 결론과 잇는다. 장면 자료가 해설의 전제와 맞을 때만 단다."""
+    method, target = run_kind(r)
+    res, status = r["data"].get("result", {}), r["data"].get("status_table", [])
+    ok, ct = bool(res.get("success")), _num(res.get("capture_time"))
+    att = _num(res.get("servicer_attitude_error")) or 0.0
+    if (method, target) == ("arm", "medium") and not ok and not any(re.search(r"phase=(close|grasped)", s) for s in status):
+        return "태양전지판이 서비스 위성과 먼저 부딪혀 파지 단계에 들어가지 못했다. 돌출 구조물이 로봇팔의 약점이다 (결론 2)."
+    if (method, target) == ("arm", "small") and ok and ct is not None:
+        return f"강체로 붙잡아 첫 접촉 후 {ct:.1f} s 만에 감속했다. 그물·작살은 같은 감속에 수십~백수십 초가 걸린다 (결론 3)."
+    if (method, target) == ("net", "medium") and ok:
+        return "형상과 상관없이 감쌀 수 있는 그물은 태양전지판에 걸려 오히려 유리하다. 중형에서 그물이 1위인 이유다."
+    if (method, target) == ("harpoon", "medium") and ok and att >= 90:
+        return f"포획에는 성공했지만 서비스 위성이 {att:.0f}° 돌아갔다. 대상의 각운동량이 옮겨 온 결과로, 포획의 대가다 (결론 5)."
+    if (method, target) == ("net", "large") and not ok:
+        est, lost = _num(res.get("bond_established_time")), _num(res.get("bond_lost_time"))
+        text = ("한 변 5 m 그물이 지름 2 m·길이 3 m 원통을 감싸지 못해 "
+                + (f"붙은 지 {lost - est:.1f} s 만에 벗겨졌다" if est is not None and lost is not None else "결합하지 못했다")
+                + ". 대형에서 그물이 0 %인 이유다 (결론 2).")
+        max_time = float(CONFIG["sim"]["max_time"]) if CONFIG is not None else 180.0
+        sim_time = _num(res.get("sim_time")) or max_time
+        if sim_time < max_time - 1 and r["data"].get("frames"):
+            text += f" 장면은 앞 {r['data']['frames'][-1]['t']:.0f} s 만 기록했다."
+        return text
+    return None
+
+
 def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optional[Dict] = None,
-                axis: Optional[Dict] = None, site_url: str = SITE_URL, out_dir: Optional[str] = None) -> str:
+                axis: Optional[Dict] = None, site_url: str = SITE_URL, out_dir: Optional[str] = None,
+                costs: Optional[Dict] = None) -> str:
     thumbs = thumbs or {}
     fx = scene_facts(runs)
 
@@ -562,6 +902,7 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
         thumb = thumbs.get(r["name"])
         img = (f'<img src="{thumb}" alt="{html.escape(label)} 포획 장면" loading="lazy">' if thumb
                else f'<div class="ph">{html.escape(METHOD_LABELS.get(method, method))}</div>')
+        note = run_note(r)
         cards.append(f"""
       <a class="run" href="runs/{html.escape(r['name'])}.html" style="--c:{METHOD_COLORS.get(method, '#5fc9ff')}">
         <div class="thumb">{img}<span class="badge {'ok' if ok else 'no'}">{'포획 성공' if ok else '포획 실패'}</span><span class="playbtn" aria-hidden="true">▶</span></div>
@@ -573,7 +914,8 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
             <div><dt>최대 충격량</dt><dd>{float(res.get('impulse', 0)):.1f} N·s</dd></div>
             <div><dt>잔류 상대 각속도</dt><dd>{float(res.get('final_rel_omega_deg_s', 0)):.2f} deg/s</dd></div>
             <div><dt>서비스 위성 최대 자세 변화</dt><dd>{float(res.get('servicer_attitude_error', 0)):.0f}°</dd></div>
-          </dl>
+          </dl>{f'''
+          <p class="run-note">{html.escape(keep_units(note))}</p>''' if note else ''}
         </div>
       </a>""")
 
@@ -599,6 +941,8 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
 
     # 팀 소개. 마크 그림이 있으면 왼쪽에 붙인다
     emblem = next((f"assets/{n}" for n in EMBLEM_NAMES if os.path.exists(os.path.join(out_dir, "assets", n))), None) if out_dir else None
+    has_qr = bool(out_dir) and os.path.exists(os.path.join(out_dir, "assets", QR_NAME))
+    qr_img = f'<img src="assets/{QR_NAME}" alt="이 사이트 주소 QR 코드" width="112" height="112">' if has_qr else ""
     team = (f'<div class="team">' + (f'<img src="{emblem}" alt="공군사관학교 마크">' if emblem else "") +
             f'<div><b>팀 {html.escape(TEAM["name"])}</b><span>{" · ".join(html.escape(m) for m in TEAM["members"])}</span></div></div>')
 
@@ -635,7 +979,7 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
   <canvas class="sky" aria-hidden="true"></canvas>
   <div class="topbar wrap">
     <a class="brand" href="#"><i></i>회전 우주 파편 포획 시뮬레이션</a>
-    <nav>{'<a href="#results">핵심 결과</a>' if curves else ''}<a href="#replays">3D 리플레이</a><a href="#guide">보는 법</a></nav>
+    <nav>{'<a href="#results">핵심 결과</a>' if curves else ''}{'<a href="#costs">포획의 대가</a>' if costs else ''}{'<a href="#conclusion">결론</a>' if curves else ''}<a href="#replays">3D 리플레이</a><a href="#method">조건·한계</a><a href="#guide">보는 법</a></nav>
   </div>
 
   <header class="hero wrap{'' if hero_shot else ' solo'}">
@@ -650,7 +994,7 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
       <div class="cta">{'<a class="btn primary" href="#results">핵심 결과 보기</a>' if curves else ''}<a class="btn{'' if curves else ' primary'}" href="#replays">3D 리플레이</a></div>
     </div>{hero_shot}
   </header>
-{build_results(curves, axis) if curves else ''}
+{build_results(curves, axis) if curves else ''}{build_costs(curves, costs) if costs else ''}{build_conclusions(curves, costs, axis, runs) if curves else ''}
   <section id="replays" class="wrap">
     <div class="sec-head">
       <div class="eyebrow">3D 리플레이</div>
@@ -661,7 +1005,7 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
 {"".join(cards)}
     </div>
   </section>
-
+{build_method()}
   <section id="guide" class="wrap">
     <div class="guide">
       <div>
@@ -678,6 +1022,12 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
         {fx['hold']:g} 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
         뷰어 그래프의 가로 점선이 이 기준이고, 초록 음영은 결합이 유지된 구간이다.
         감속 시간은 첫 접촉부터 상대 각속도가 기준 아래로 내려갈 때까지 걸린 시간이다.
+      </div>
+      <div>
+        <h3>휴대폰으로 보기</h3>
+        <div class="qr">{qr_img}<div>
+        한 손가락으로 끌면 장면이 돌아가고, 두 손가락을 오므리거나 벌리면 축소·확대된다.
+        휴대폰을 가로로 돌리면 장면이 넓게 보인다. 리플레이 하나는 1~4 MB 라 처음 열 때 잠시 걸릴 수 있다.</div></div>
       </div>
     </div>
   </section>
@@ -826,7 +1176,7 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
         if not os.path.exists(src):
             raise SystemExit(f"공유 자산이 없다: {src}")
         shutil.copyfile(src, os.path.join(out_dir, "assets", dst))
-    for n in EMBLEM_NAMES:                       # 공군사관학교 마크 (있을 때만)
+    for n in EMBLEM_NAMES + [QR_NAME]:           # 공군사관학교 마크와 사이트 QR 코드 (있을 때만)
         if os.path.exists(os.path.join(here, "assets", n)):
             shutil.copyfile(os.path.join(here, "assets", n), os.path.join(out_dir, "assets", n))
 
@@ -881,10 +1231,12 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
         capture_thumbs(out_dir, runs)               # 방금 쓴 뷰어 페이지를 열어 찍는다
         write_viewers(find_thumbs(out_dir, runs))   # 썸네일이 생겼으니 링크 미리보기 그림을 넣어 다시 쓴다
     found = find_thumbs(out_dir, runs)
-    curves = load_summary(summary or os.path.join(here, "results", "results_summary.csv"))
+    summary_path = summary or os.path.join(here, "results", "results_summary.csv")
+    curves = load_summary(summary_path)
     axis = load_axis(os.path.join(here, "results_axis"))
+    costs = load_costs(summary_path, os.path.join(os.path.dirname(summary_path), "results_raw.csv"))
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(build_index(runs, curves, found, axis, site_url, out_dir))
+        f.write(build_index(runs, curves, found, axis, site_url, out_dir, costs))
 
     # 오프라인 발표 대비용 단독 HTML. 첫 화면이 없으므로 이동 막대에는 시나리오끼리만 잇는다
     if standalone:
