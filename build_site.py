@@ -267,7 +267,7 @@ min-height:min(calc(100vh - 80px),860px);padding-bottom:48px}
 .hero h1 .hl{background:linear-gradient(95deg,#ffffff 0%,#b5e2ff 50%,#5fc9ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .subtitle{margin:0 0 16px;font-size:clamp(16px,1.6vw,20px);color:#c5cfe1;font-weight:500;letter-spacing:-.01em}
 .team{display:flex;align-items:center;gap:12px;margin:0 0 20px}
-.team img{height:46px;width:auto;flex:none}
+.team img{width:52px;height:52px;flex:none;box-sizing:border-box;padding:5px;background:#fff;border-radius:50%;object-fit:contain}
 .team b{display:block;font-size:15px;font-weight:700}
 .team span{color:var(--muted);font-size:14px}
 .lede{margin:0;color:var(--muted);font-size:15.5px;line-height:1.8;max-width:54ch}

@@ -44,7 +44,7 @@ min-height:min(calc(100vh - 80px),860px);padding-bottom:48px}
 .hero h1 .hl{background:linear-gradient(95deg,#ffffff 0%,#b5e2ff 50%,#5fc9ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .subtitle{margin:0 0 16px;font-size:clamp(16px,1.6vw,20px);color:#c5cfe1;font-weight:500;letter-spacing:-.01em}
 .team{display:flex;align-items:center;gap:12px;margin:0 0 20px}
-.team img{height:46px;width:auto;flex:none}
+.team img{width:52px;height:52px;flex:none;box-sizing:border-box;padding:5px;background:#fff;border-radius:50%;object-fit:contain}
 .team b{display:block;font-size:15px;font-weight:700}
 .team span{color:var(--muted);font-size:14px}
 .lede{margin:0;color:var(--muted);font-size:15.5px;line-height:1.8;max-width:54ch}
@@ -161,7 +161,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
       <div class="eyebrow">2026 공군사관학교 미래 항공우주 학술대회</div>
       <h1>회전하는 우주 파편의<br><span class="hl">포획 방식 비교</span></h1>
       <p class="subtitle">로봇팔 · 그물 · 작살의 물리 시뮬레이션 기반 정량 평가</p>
-      <div class="team"><div><b>팀 영윤준서결</b><span>배영윤 · 최윤준 · 이준서 · 김결</span></div></div>
+      <div class="team"><img src="assets/afa_emblem.svg" alt="공군사관학교 마크"><div><b>팀 영윤준서결</b><span>배영윤 · 최윤준 · 이준서 · 김결</span></div></div>
       <p class="lede">지구 저궤도 파편은 대부분 회전하고 있어, 제거하려면 회전체를 안전하게 붙잡아야 한다.
       PyBullet 다물체 동역학에 상대 궤도 역학을 더해 세 방식을 같은 조건에서 비교했고, 대상과 서비스 위성의
       상대 각속도가 1 deg/s 이하로 잦아들어 3 초 이상 유지되면 성공으로 셌다.</p>
