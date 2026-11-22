@@ -1,6 +1,8 @@
 <title>회전 우주 파편 포획 · 3D 리플레이</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<!-- 글꼴은 화면과 스크립트를 막지 않게 받는다(media=print 로 받은 뒤 all 로 바꾼다).
+     외부 서버가 응답 없이 막힌 망에서도 3D 화면은 바로 뜨고, 글꼴만 맑은 고딕으로 대신한다 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
 <style>
   :root {
     --bg: #05070d;
@@ -25,7 +27,7 @@
   [hidden] { display: none !important; }
   img { max-width: 100%; }
   #app { position: relative; width: 100%; height: 100%; }
-  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   #app > * { box-sizing: border-box; }
 
   /* ---------- 공통 패널 */
@@ -45,7 +47,7 @@
   .seg .btn:last-child { border-right: 0; }
 
   /* ---------- 상단 임무 헤더 */
-  .mission { position: absolute; top: 14px; left: 14px; padding: 12px 14px; max-width: min(420px, calc(100% - 28px)); display: grid; gap: 6px; }
+  .mission { position: absolute; top: 14px; left: 14px; padding: 12px 14px; max-width: min(480px, calc(100% - 28px)); display: grid; gap: 6px; }
   .mission h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
   .mission .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .mission .verdict { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -77,8 +79,10 @@
   .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .timeline { position: relative; flex: 1 1 240px; height: 26px; display: flex; align-items: center; }
   .timeline input { width: 100%; margin: 0; accent-color: var(--accent); cursor: pointer; }
+  /* 사건 표시는 누르면 그 시각으로 간다. 막대 자체는 재생 바 조작을 가리지 않게 표시만 받는다 */
   .marks { position: absolute; left: 0; right: 0; top: 0; height: 6px; pointer-events: none; }
-  .marks i { position: absolute; top: -2px; width: 3px; height: 9px; margin-left: -1.5px; background: var(--warn); border-radius: 2px; }
+  .marks i { position: absolute; top: -4px; width: 4px; height: 11px; margin-left: -2px; background: var(--warn); border-radius: 2px; pointer-events: auto; cursor: pointer; }
+  .marks i:hover { transform: scaleY(1.3); }
   .marks i.good { background: var(--good); } .marks i.bad { background: var(--bad); } .marks i.info { background: var(--accent); }
   .time { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12px; min-width: 150px; }
   .play { width: 40px; height: 32px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
@@ -95,7 +99,8 @@
   .help td { padding: 5px 4px; border-bottom: 1px solid var(--line); }
   .help td:first-child { font-family: var(--mono); color: var(--accent); white-space: nowrap; width: 38%; }
   .help h2 { margin: 0; font-size: 15px; font-weight: 600; }
-  .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-family: var(--mono); }
+  .empty { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; padding: 24px; background: var(--bg); color: var(--muted); text-align: center; line-height: 1.7; }
+  .empty b { display: block; margin-bottom: 6px; color: var(--text); font-size: 17px; }
   .toast { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); padding: 6px 12px; font-family: var(--mono); font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .toast.show { opacity: 1; }
 
@@ -129,7 +134,7 @@
   .bighud .phase { max-width: 280px; font-size: 20px; font-weight: 600; line-height: 1.3; }
   .present .bighud { display: flex; }
   .present .telemetry, .present .transport .tools { display: none; }
-  .present .mission { max-width: min(480px, calc(100% - 28px)); padding: 16px 18px; }
+  .present .mission { padding: 16px 18px; }
   .present .mission h1 { font-size: 28px; }
   .present .callout .ct { font-size: 36px; }
 
@@ -142,7 +147,7 @@
     .sitenav a:not(.home):not(.cur) { display: none; }
     .callout { top: 40%; }
     .callout .ct, .present .callout .ct { font-size: 20px; }
-    .bighud { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); gap: 16px; padding: 10px 14px; }
+    .bighud { gap: 16px; padding: 10px 14px; }
     .bighud .v { font-size: 26px; } .bighud .v.word { font-size: 20px; } .bighud .phase { font-size: 15px; }
     .present .mission h1 { font-size: 20px; }
   }
@@ -203,7 +208,7 @@
       <div class="toggles" id="toggles"></div>
       <span class="spacer"></span>
       <button class="btn" id="shot">스크린샷</button>
-      <button class="btn" id="fs">전체화면</button>
+      <button class="btn" id="fs" title="시나리오를 옮기면 풀린다. 계속 유지하려면 F11">전체화면</button>
       <button class="btn" id="helpBtn">조작법 ?</button>
     </div>
   </footer>
@@ -216,7 +221,7 @@
         <tr><td>Shift+드래그 · 오른쪽 드래그</td><td>화면 이동(팬)</td></tr>
         <tr><td>← → ↑ ↓</td><td>회전</td></tr>
         <tr><td>+ / −</td><td>줌 인 / 아웃</td></tr>
-        <tr><td>1 2 3 4</td><td>카메라: 중점 / 대상 / 서비서 / 자유</td></tr>
+        <tr><td>1 2 3 4</td><td>카메라: 중점 / 대상 / 서비스 위성 / 자유</td></tr>
         <tr><td>Space</td><td>재생 / 일시정지</td></tr>
         <tr><td>, .</td><td>한 프레임 뒤로 / 앞으로</td></tr>
         <tr><td>[ ]</td><td>재생 속도 낮춤 / 높임</td></tr>
@@ -224,6 +229,7 @@
         <tr><td>P</td><td>발표 모드 (핵심 수치만 크게)</td></tr>
         <tr><td>O</td><td>카메라 자동 회전</td></tr>
         <tr><td>N</td><td>그물·테더 질점 표시 (발표 모드에서는 꺼진다)</td></tr>
+        <tr><td>F11</td><td>브라우저 전체화면 (시나리오를 옮겨도 유지된다)</td></tr>
         <tr><td>? 또는 H</td><td>이 도움말</td></tr>
       </table>
       <div class="row"><span class="spacer"></span><button class="btn" id="helpClose">닫기</button></div>
@@ -251,7 +257,7 @@
   const S = DATA.static, F = DATA.frames, R = DATA.result || {}, ST = DATA.status_table || [];
   const THR = (S.success && S.success.rel_omega_threshold_deg_s) || 1.0;
   const T_END = F[F.length - 1].t;
-  const LABEL = { arm: "로봇팔", net: "그물", harpoon: "작살", small: "소형 10 kg 큐브샛", medium: "중형 500 kg 위성", large: "대형 2000 kg 로켓 단" };
+  const LABEL = { arm: "로봇팔", net: "그물", harpoon: "작살", small: "소형 10 kg 큐브샛", medium: "중형 500 kg 위성", large: "대형 2,000 kg 로켓 단" };
   const SPIN_MODE = { principal: "주축 회전", precession: "세차 회전" };
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -275,45 +281,76 @@
   chip(`회전 ${(+R.spin_deg_s || 0).toFixed(0)} deg/s`); chip(SPIN_MODE[R.spin_mode] || R.spin_mode || "주축 회전"); chip(`시드 ${R.seed ?? 0}`);
   chip(`${S.orbit && S.orbit.enabled ? "고도 " + S.orbit.altitude_km + " km 궤도" : "궤도 없음"}`);
   if (R.impulse != null) chip(`충격량 ${(+R.impulse).toFixed(2)} N·s`);
-  if (R.servicer_attitude_error != null) chip(`서비서 자세 변화 ${(+R.servicer_attitude_error).toFixed(1)}°`);
+  if (R.servicer_attitude_error != null) chip(`서비스 위성 최대 자세 변화 ${(+R.servicer_attitude_error).toFixed(1)}°`);
   const verdict = document.getElementById("verdict");
   verdict.classList.add(R.success ? "ok" : "fail");
+  // 실패 이유는 기록된 결과에서 가장 구체적인 것을 고른다. 감속 시간은 첫 접촉부터 잰 값이라 그렇게 적는다
+  const reachedGrasp = ST.some((s) => /phase=(close|grasped)/.test(s));
+  const anchored = ST.some((s) => s === "harpoon=anchored");
+  function failReason() {
+    if (S.method === "arm" && !reachedGrasp) return "파지 단계에 한 번도 들어가지 못함";
+    if (R.bond_established_time == null) return "결합을 한 번도 형성하지 못함";
+    if (!R.bond_intact_final) return "결합이 끊김";
+    return "시간 안에 감속하지 못함";
+  }
   const VERDICT = R.success
-    ? `포획 성공 · 감속 시간 ${(+R.capture_time).toFixed(2)} s`
-    : `포획 실패 · ${R.notes || (R.bond_intact_final ? "시간 안에 감속하지 못함" : "결합이 형성되지 않거나 끊김")}`;
+    ? `포획 성공 · 첫 접촉 후 ${(+R.capture_time).toFixed(2)} s 만에 감속`
+    : `포획 실패 · ${failReason()}`;
   document.getElementById("verdictText").textContent = VERDICT;
   document.getElementById("thrLabel").textContent = THR;
 
   // build_site.py 로 만든 페이지는 다른 시나리오로 가는 길을 window.__SITE_NAV__ 로 넣어 준다.
-  // 오프라인용 단독 HTML 은 첫 화면이 없어 home 이 빠진다. capture_sim.py 로 바로 만든 HTML 에는 둘 다 없다
+  // 오프라인용 단독 HTML 은 첫 화면이 없어 home 이 빠진다. capture_sim.py 로 바로 만든 HTML 에는 둘 다 없다.
+  // 발표 모드에서 다른 시나리오로 옮기면 그쪽도 발표 모드로 열리게 누를 때 ?present 를 붙인다
   const NAV = window.__SITE_NAV__;
   if (NAV && NAV.runs) {
     const nav = document.getElementById("sitenav");
-    nav.innerHTML = (NAV.home ? `<a class="home" href="${NAV.home}">← 전체 결과</a>` : "") +
-      NAV.runs.map((r) => `<a href="${r.href}" class="${r.current ? "cur" : ""}" style="--c:${r.color}"${r.current ? ' aria-current="page"' : ""}><i></i>${r.label}</a>`).join("");
+    const link = (href, text, cls) => { const a = document.createElement("a"); a.href = href; a.className = cls || ""; a.textContent = text; nav.appendChild(a); return a; };
+    if (NAV.home) link(NAV.home, "← 전체 결과", "home");
+    for (const r of NAV.runs) {
+      const a = link(r.href, r.label, r.current ? "cur" : "");
+      a.style.setProperty("--c", r.color); a.prepend(document.createElement("i"));
+      if (r.current) a.setAttribute("aria-current", "page");
+      else a.addEventListener("click", () => { if (app.classList.contains("present")) a.href = r.href + "?present"; });
+    }
     nav.hidden = false;
   }
 
   // ---------------------------------------------------------------- 이벤트
   // call 이 있는 사건은 재생 중 그 시각을 지날 때 화면에 크게 알린다.
-  // 결합 형성·끊김은 그물에서 수십 ms 간격으로 오가므로 목록에만 두고 알리지 않는다
+  // 그물은 결합이 수십 ms 만에 끊겼다 다시 붙기도 하므로, 끝까지 유지된 경우의 끊김은 경고가 아닌 정보로 적는다
   const events = [];
-  if (R.first_contact_time != null) events.push({ t: +R.first_contact_time, name: "첫 접촉", cls: "info", call: S.method === "harpoon" ? "작살 관통" : "첫 접촉" });
+  if (R.first_contact_time != null) events.push({ t: +R.first_contact_time, name: "첫 접촉", cls: "info",
+    call: S.method !== "harpoon" ? "첫 접촉" : anchored ? "작살 관통" : "작살 충돌" });
   if (R.bond_established_time != null) events.push({ t: +R.bond_established_time, name: "결합 형성", cls: "good" });
-  if (R.bond_lost_time != null) events.push({ t: +R.bond_lost_time, name: "결합 끊김", cls: "bad" });
+  if (R.bond_lost_time != null) events.push(R.bond_intact_final
+    ? { t: +R.bond_lost_time, name: "결합 잠깐 끊김 → 재형성", cls: "info" }
+    : { t: +R.bond_lost_time, name: "결합 끊김", cls: "bad", call: "결합 끊김" });
   if (R.closing_started != null) events.push({ t: +R.closing_started, name: "그물 입구 조임", cls: "info", call: "그물 입구 조임" });
   if (R.success && R.capture_time != null && R.first_contact_time != null) events.push({ t: +R.first_contact_time + +R.capture_time, name: `상대 각속도 ${THR} deg/s 이하`, cls: "good", call: "감속 완료" });
   events.sort((a, b) => a.t - b.t);
   const evBox = document.getElementById("events"), marks = document.getElementById("marks");
   for (const e of events) {
     evBox.insertAdjacentHTML("beforeend", `<div><span>${e.name}</span><span class="t">T+${e.t.toFixed(2)} s</span></div>`);
-    marks.insertAdjacentHTML("beforeend", `<i class="${e.cls}" style="left:${(100 * e.t / T_END).toFixed(2)}%" title="${e.name}"></i>`);
+    // 재생 바 손잡이는 양 끝에서 반 폭(약 8px)만큼 안쪽까지만 움직이므로 표시도 같은 폭 안에 놓는다
+    const m = document.createElement("i"); m.className = e.cls; m.title = `${e.name} · T+${e.t.toFixed(2)} s`;
+    m.style.left = `calc(8px + (100% - 16px) * ${(e.t / T_END).toFixed(4)})`;
+    m.addEventListener("click", () => seek(e.t));
+    marks.appendChild(m);
   }
   if (!events.length) evBox.innerHTML = '<div><span>기록된 접촉 없음</span></div>';
 
   // ---------------------------------------------------------------- 렌더러 / 장면
   const canvas = document.getElementById("gl");
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+  // 그래픽 가속이 꺼졌거나 막힌 PC 에서는 WebGL 을 못 만든다. 검은 화면 대신 이유와 대처를 띄운다
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+  } catch (err) {
+    app.insertAdjacentHTML("beforeend", '<div class="empty"><div><b>이 컴퓨터에서 3D 그래픽(WebGL)을 쓸 수 없습니다</b>' +
+      '브라우저 설정에서 "가능한 경우 그래픽 가속 사용"을 켜거나 Chrome·Edge 최신판으로 열어 주세요.</div></div>');
+    return;
+  }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -576,34 +613,41 @@
     if (camState.mode === "free") return camState.free.clone();
     return target.position.clone().add(servicer.position).multiplyScalar(0.5);
   }
+  // 중점 모드에서 두 위성이 처음보다 멀어지면(놓친 뒤 떠내려가는 실패 시행) 그 비율만큼 물러나 둘 다 화면에 남긴다
+  const midFit = () => camState.mode === "mid" ? Math.max(1, target.position.distanceTo(servicer.position) / Math.max(sep0, 1e-6)) : 1;
+  const zoomTo = (d) => { camState.dist = Math.max(0.6, Math.min(4000, d)); };
   function updateCamera() {
     const a = anchor().add(camState.offset);
-    // 중점 모드에서 두 위성이 처음보다 멀어지면(놓친 뒤 떠내려가는 실패 시행) 그 비율만큼 물러나 둘 다 화면에 남긴다
-    const fit = camState.mode === "mid" ? Math.max(1, target.position.distanceTo(servicer.position) / Math.max(sep0, 1e-6)) : 1;
-    const d = camState.dist * fit, cp = Math.cos(camState.pitch), sp = Math.sin(camState.pitch);
+    const d = camState.dist * midFit(), cp = Math.cos(camState.pitch), sp = Math.sin(camState.pitch);
     camera.position.set(a.x + d * cp * Math.cos(camState.yaw), a.y + d * cp * Math.sin(camState.yaw), a.z + d * sp);
     camera.lookAt(a);
   }
   function setMode(m) {
-    if (camState.mode !== "free" && m === "free") camState.free = anchor().add(camState.offset);
-    camState.mode = m; if (m !== "free") camState.offset.set(0, 0, 0);
+    // 자유 모드로 넘어갈 때는 보던 자리를 고정점으로 삼고, 이동량과 중점 모드의 물러난 거리를 거기에 넣어 화면이 튀지 않게 한다
+    if (camState.mode !== "free" && m === "free") { camState.free = anchor().add(camState.offset); zoomTo(camState.dist * midFit()); }
+    camState.mode = m; camState.offset.set(0, 0, 0);
     document.querySelectorAll("#camMode .btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
   }
   function resetCamera() { camState.yaw = 0.65; camState.pitch = 0.28; camState.dist = d0; camState.offset.set(0, 0, 0); setMode("mid"); }
-  // 마우스 / 터치
+  // 마우스 / 터치. 손가락이 둘 이상이면 회전은 멈추고 핀치 확대만 받는다
   let drag = null;
-  canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, btn: e.button, shift: e.shiftKey }; canvas.setPointerCapture(e.pointerId); });
+  const pointers = new Set();
+  canvas.addEventListener("pointerdown", (e) => {
+    pointers.add(e.pointerId); canvas.setPointerCapture(e.pointerId);
+    drag = pointers.size === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, btn: e.button, shift: e.shiftKey } : null;
+  });
   canvas.addEventListener("pointermove", (e) => {
-    if (!drag) return;
+    if (!drag || e.pointerId !== drag.id || pointers.size > 1) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
     if (drag.btn === 2 || drag.shift) pan(dx, dy); else { camState.yaw -= dx * 0.006; camState.pitch = Math.max(-1.5, Math.min(1.5, camState.pitch + dy * 0.006)); }
   });
-  canvas.addEventListener("pointerup", () => { drag = null; }); canvas.addEventListener("pointercancel", () => { drag = null; });
+  const pointerEnd = (e) => { pointers.delete(e.pointerId); if (!drag || drag.id === e.pointerId) drag = null; };
+  canvas.addEventListener("pointerup", pointerEnd); canvas.addEventListener("pointercancel", pointerEnd);
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-  canvas.addEventListener("wheel", (e) => { e.preventDefault(); camState.dist = Math.max(0.6, Math.min(4000, camState.dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
+  canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoomTo(camState.dist * Math.exp(e.deltaY * 0.0012)); }, { passive: false });
   let pinch = null;
   canvas.addEventListener("touchstart", (e) => { if (e.touches.length === 2) pinch = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }, { passive: true });
-  canvas.addEventListener("touchmove", (e) => { if (e.touches.length === 2 && pinch) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); camState.dist = Math.max(0.6, camState.dist * pinch / d); pinch = d; } }, { passive: true });
+  canvas.addEventListener("touchmove", (e) => { if (e.touches.length === 2 && pinch) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); zoomTo(camState.dist * pinch / d); pinch = d; } }, { passive: true });
   function pan(dx, dy) {
     const right = V3(), up = V3(), fwd = V3(); camera.getWorldDirection(fwd); right.crossVectors(fwd, camera.up).normalize(); up.crossVectors(right, fwd).normalize();
     const k = camState.dist * 0.0015; camState.offset.add(right.multiplyScalar(-dx * k)).add(up.multiplyScalar(dy * k));
@@ -625,13 +669,14 @@
   SPEEDS.forEach((s) => { const b = document.createElement("button"); b.className = "btn" + (s === 1 ? " active" : ""); b.textContent = s + "×"; b.dataset.speed = s; b.addEventListener("click", () => setSpeed(s)); speedBox.appendChild(b); });
   function setSpeed(s) { play.speed = s; speedBox.querySelectorAll(".btn").forEach((b) => b.classList.toggle("active", +b.dataset.speed === s)); }
   const camBox = document.getElementById("camMode");
-  [["mid", "중점"], ["target", "대상"], ["servicer", "서비서"], ["free", "자유"]].forEach(([m, l]) => { const b = document.createElement("button"); b.className = "btn" + (m === "mid" ? " active" : ""); b.textContent = l; b.dataset.mode = m; b.addEventListener("click", () => setMode(m)); camBox.appendChild(b); });
+  [["mid", "중점"], ["target", "대상"], ["servicer", "서비스 위성"], ["free", "자유"]].forEach(([m, l]) => { const b = document.createElement("button"); b.className = "btn" + (m === "mid" ? " active" : ""); b.textContent = l; b.dataset.mode = m; b.addEventListener("click", () => setMode(m)); camBox.appendChild(b); });
   const show = { springs: true, nodes: true, axis: true, marker: true, trail: false, earth: true, orbit: false };
   const togBox = document.getElementById("toggles");
   // 질점 구는 실제 충돌 반경이라 그물이 솜뭉치처럼 보인다. 그물 모양을 설명할 때는 꺼서 스프링 선만 남긴다
   [["springs", "스프링"], ...(net || tether ? [["nodes", "질점"]] : []), ["axis", "회전축"], ["marker", "파지점"], ["trail", "궤적"], ["earth", "지구"], ["orbit", "자동 회전"]].forEach(([k, l]) => {
     const id = "tog_" + k; togBox.insertAdjacentHTML("beforeend", `<label for="${id}"><input type="checkbox" id="${id}" ${show[k] ? "checked" : ""}>${l}</label>`);
-    document.getElementById(id).addEventListener("change", (e) => { show[k] = e.target.checked; applyToggles(); });
+    // 누른 뒤 포커스를 놓아 Space·단축키가 체크박스가 아닌 재생 조작으로 가게 한다
+    document.getElementById(id).addEventListener("change", (e) => { show[k] = e.target.checked; applyToggles(); e.target.blur(); });
   });
   function applyToggles() {
     if (net && net.lines) net.lines.visible = show.springs; if (tether && tether.lines) tether.lines.visible = show.springs;
@@ -640,9 +685,19 @@
   }
   applyToggles();
   function setToggle(k, v) { show[k] = v; const el = document.getElementById("tog_" + k); if (el) el.checked = v; applyToggles(); }
-  function togglePlay(force) { play.on = force == null ? !play.on : force; if (play.on && play.t >= T_END - 1e-6) play.t = 0; ui.play.textContent = play.on ? "❚❚" : "▶"; }
+  function togglePlay(force) {
+    play.on = force == null ? !play.on : force;
+    if (play.on && play.t >= T_END - 1e-6) { play.t = 0; clearCallouts(); }   // 끝에서 다시 볼 때 최종 판정 알림을 걷는다
+    ui.play.textContent = play.on ? "❚❚" : "▶";
+  }
+  function seek(t) { play.t = Math.max(0, Math.min(T_END, t)); togglePlay(false); clearCallouts(); }
   ui.play.addEventListener("click", () => togglePlay());
-  ui.scrub.addEventListener("input", () => { play.t = (+ui.scrub.value / 1000) * T_END; togglePlay(false); clearCallouts(); });
+  // 끄는 동안에만 손잡이 위치를 재생 시각에 맞추지 않는다. 놓으면 포커스도 풀어 Space 가 재생으로 간다
+  let scrubbing = false;
+  ui.scrub.addEventListener("pointerdown", () => { scrubbing = true; });
+  window.addEventListener("pointerup", () => { if (scrubbing) { scrubbing = false; ui.scrub.blur(); } });
+  ui.scrub.addEventListener("input", () => seek((+ui.scrub.value / 1000) * T_END));
+  ui.scrub.addEventListener("change", () => ui.scrub.blur());
 
   // 발표 모드: 오른쪽 패널과 카메라 줄을 숨기고 핵심 수치를 왼쪽 아래에 크게 띄운다.
   // 질점 구도 숨겨 그물·테더가 선으로 보이게 하고, 발표 모드를 끄면 원래 상태로 돌린다
@@ -658,16 +713,34 @@
   }
   ui.present.addEventListener("click", () => setPresent(!app.classList.contains("present")));
 
-  // 사건 알림. 짧은 간격으로 겹치면 차례로 하나씩 보여 준다
-  const co = { el: document.getElementById("callout"), title: document.getElementById("cTitle"), sub: document.getElementById("cSub"), q: [], timer: 0, busy: false };
-  function pushCallout(title, sub, cls, hold) { co.q.push({ title, sub, cls, hold: hold || 1900 }); if (!co.busy) nextCallout(); }
-  function nextCallout() {
-    const c = co.q.shift(); if (!c) { co.busy = false; return; }
-    co.busy = true; co.title.textContent = c.title; co.sub.textContent = c.sub;
-    co.el.className = "callout panel show " + c.cls;
-    co.timer = setTimeout(() => { co.el.classList.remove("show"); co.timer = setTimeout(nextCallout, 380); }, c.hold);
+  // 사건 알림. 짧은 간격으로 겹치면 차례로 보여 주되, 다음 알림이 기다리면 지금 것은 0.9 초만 띄우고 넘긴다.
+  // 그래야 빠른 배속에서도 알림이 장면보다 한참 늦게 뜨지 않는다
+  const co = { el: document.getElementById("callout"), title: document.getElementById("cTitle"), sub: document.getElementById("cSub"),
+               q: [], timer: 0, busy: false, shownAt: 0, fading: false };
+  const MIN_SHOW = 900, FADE = 380;
+  function pushCallout(title, sub, cls, hold) {
+    co.q.push({ title, sub, cls, hold: hold || 1900 });
+    if (!co.busy) nextCallout();
+    else if (!co.fading) { clearTimeout(co.timer); co.timer = setTimeout(hideCallout, Math.max(0, co.shownAt + MIN_SHOW - performance.now())); }
   }
-  function clearCallouts() { co.q.length = 0; clearTimeout(co.timer); co.busy = false; co.el.classList.remove("show"); }
+  function hideCallout() { co.fading = true; co.el.classList.remove("show"); co.timer = setTimeout(nextCallout, FADE); }
+  function nextCallout() {
+    co.fading = false;
+    const c = co.q.shift(); if (!c) { co.busy = false; return; }
+    co.busy = true; co.shownAt = performance.now(); co.title.textContent = c.title; co.sub.textContent = c.sub;
+    co.el.className = "callout panel show " + c.cls;
+    placeCallout();
+    co.timer = setTimeout(hideCallout, co.q.length ? MIN_SHOW : c.hold);
+  }
+  function clearCallouts() { co.q.length = 0; clearTimeout(co.timer); co.busy = false; co.fading = false; co.el.classList.remove("show"); }
+  // 알림은 화면 위쪽 가운데에 띄우되, 왼쪽 위 제목 패널과 가로로 겹치면 그 아래로 내린다
+  function placeCallout() {
+    const ar = app.getBoundingClientRect(), mr = document.querySelector(".mission").getBoundingClientRect();
+    const narrow = ar.width <= 820, w = co.el.offsetWidth;
+    let top = narrow ? ar.height * 0.4 : Math.min(260, Math.max(150, ar.height * 0.24));
+    if (!narrow && ar.width / 2 - w / 2 < mr.right - ar.left + 10) top = Math.max(top, mr.bottom - ar.top + 14);
+    co.el.style.top = top + "px";
+  }
   document.getElementById("shot").addEventListener("click", () => {
     renderer.render(scene, camera);
     const a = document.createElement("a"); a.href = renderer.domElement.toDataURL("image/png"); a.download = `capture_${S.method}_${S.target.kind}_${Math.round(R.spin_deg_s || 0)}deg_T${play.t.toFixed(2)}.png`; a.click();
@@ -681,14 +754,17 @@
   let toastTimer = 0;
   function toast(msg) { ui.toast.textContent = msg; ui.toast.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => ui.toast.classList.remove("show"), 1600); }
   window.addEventListener("keydown", (e) => {
-    if (e.target.tagName === "INPUT" && e.target.type !== "range") return;
+    // Ctrl·Alt·Cmd 조합(화면 확대 Ctrl +/−, 뒤로 가기 Alt+← 등)은 브라우저에 맡긴다
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // 글자를 입력하는 칸만 건너뛴다. 체크박스·재생 바에 포커스가 남아 있어도 단축키는 그대로 받는다
+    if ((e.target.tagName === "INPUT" && !["range", "checkbox"].includes(e.target.type)) || e.target.tagName === "TEXTAREA") return;
     const k = e.key;
     if (k === " ") { e.preventDefault(); togglePlay(); }
     else if (k === "ArrowLeft") camState.yaw -= 0.06; else if (k === "ArrowRight") camState.yaw += 0.06;
     else if (k === "ArrowUp") camState.pitch = Math.min(1.5, camState.pitch + 0.04); else if (k === "ArrowDown") camState.pitch = Math.max(-1.5, camState.pitch - 0.04);
-    else if (k === "+" || k === "=") camState.dist *= 0.9; else if (k === "-" || k === "_") camState.dist *= 1.1;
+    else if (k === "+" || k === "=") zoomTo(camState.dist * 0.9); else if (k === "-" || k === "_") zoomTo(camState.dist * 1.1);
     else if (k === "1") setMode("mid"); else if (k === "2") setMode("target"); else if (k === "3") setMode("servicer"); else if (k === "4") setMode("free");
-    else if (k === "," || k === ".") { togglePlay(false); const step = 1 / (DATA.fps || 30); play.t = Math.max(0, Math.min(T_END, play.t + (k === "." ? step : -step))); }
+    else if (k === "," || k === ".") { const step = 1 / (DATA.fps || 30); seek(play.t + (k === "." ? step : -step)); }
     else if (k === "[" || k === "]") { const i = SPEEDS.indexOf(play.speed); setSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, i + (k === "]" ? 1 : -1)))]); }
     else if (k === "r" || k === "R") resetCamera();
     else if (k === "p" || k === "P") setPresent(!app.classList.contains("present"));
@@ -712,8 +788,9 @@
     chartW = r.width; chartH = r.height;
   }
   let chartW = 280, chartH = 120;
+  const CH_L = 34, CH_R = 8;   // 그래프 왼쪽(눈금 글자)·오른쪽 여백. 클릭 위치 환산도 같은 값을 쓴다
   function drawChart() {
-    const W = chartW, H = chartH, L = 32, Rr = 8, T = 10, Bt = 18, pw = W - L - Rr, ph = H - T - Bt;
+    const W = chartW, H = chartH, L = CH_L, Rr = CH_R, T = 10, Bt = 20, pw = W - L - Rr, ph = H - T - Bt;
     const g = chartCtx; g.clearRect(0, 0, W, H);
     g.fillStyle = "rgba(255,255,255,0.025)"; g.fillRect(L, T, pw, ph);
     const X = (t) => L + (t / T_END) * pw, Y = (v) => T + ph - (Math.min(v, relMax) / relMax) * ph;
@@ -721,7 +798,7 @@
     g.fillStyle = "rgba(74,212,148,0.14)";
     for (let i = 0; i < F.length - 1; i++) if (F[i].bond) g.fillRect(X(F[i].t), T, Math.max(1, X(F[i + 1].t) - X(F[i].t)), ph);
     // 격자·눈금
-    g.strokeStyle = "#223047"; g.lineWidth = 1; g.font = "9px IBM Plex Mono, monospace"; g.fillStyle = "#8d97ad"; g.textAlign = "right"; g.textBaseline = "middle";
+    g.strokeStyle = "#223047"; g.lineWidth = 1; g.font = "11px IBM Plex Mono, Consolas, monospace"; g.fillStyle = "#a3adc2"; g.textAlign = "right"; g.textBaseline = "middle";
     const ticks = niceTicks(0, relMax, 3);
     for (const v of ticks) { const y = Y(v); g.beginPath(); g.moveTo(L, y); g.lineTo(L + pw, y); g.stroke(); g.fillText(v.toFixed(v < 10 ? 1 : 0), L - 5, y); }
     g.textAlign = "center"; g.textBaseline = "top";
@@ -742,14 +819,14 @@
   function niceTicks(a, b, n) { const raw = (b - a) / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag; const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag; const out = []; for (let v = Math.ceil(a / step) * step; v <= b + 1e-9; v += step) out.push(v); return out; }
   ui.chart.addEventListener("click", (e) => {
     const r = ui.chart.getBoundingClientRect();
-    const t = ((e.clientX - r.left - 32) / (r.width - 40)) * T_END;
-    if (t >= 0 && t <= T_END) { play.t = t; togglePlay(false); }
+    const t = ((e.clientX - r.left - CH_L) / (r.width - CH_L - CH_R)) * T_END;
+    if (t >= 0 && t <= T_END) seek(t);
   });
 
   // ---------------------------------------------------------------- HUD 갱신
   function updateHUD() {
     ui.tCur.textContent = "T+" + cur.t.toFixed(2); ui.tTime.innerHTML = cur.t.toFixed(2) + "<small>s</small>";
-    if (document.activeElement !== ui.scrub) ui.scrub.value = Math.round((cur.t / T_END) * 1000);
+    if (!scrubbing) ui.scrub.value = Math.round((cur.t / T_END) * 1000);
     ui.tRel.innerHTML = cur.rel.toFixed(2) + "<small>deg/s</small>"; ui.tRel.className = "v " + (cur.rel <= THR ? "good" : cur.rel <= 5 * THR ? "warn" : "");
     ui.tW.innerHTML = cur.w.toFixed(2) + "<small>deg/s</small>";
     ui.tDist.innerHTML = cur.dist.toFixed(2) + "<small>m</small>";
@@ -763,10 +840,20 @@
   }
 
   // ---------------------------------------------------------------- 루프
+  // 재생 바는 화면 폭에 따라 한두 줄로 바뀌므로, 그 높이를 재서 위에 놓이는 패널들이 가려지지 않게 맞춘다
+  const transportEl = document.querySelector(".transport"), telemetryEl = document.querySelector(".telemetry"), bighudEl = document.getElementById("bighud");
+  function layoutPanels() {
+    const gap = 12, bar = transportEl.offsetHeight + 14 + gap;   // 14 = 재생 바 아래 여백
+    bighudEl.style.bottom = bar + "px";
+    if (app.clientWidth <= 820) { telemetryEl.style.bottom = bar + "px"; telemetryEl.style.maxHeight = ""; }
+    else { telemetryEl.style.bottom = ""; telemetryEl.style.maxHeight = Math.max(160, app.clientHeight - bar - 14) + "px"; }
+  }
   function resize() {
     const w = app.clientWidth, h = app.clientHeight;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));   // 다른 배율의 화면으로 옮기거나 확대해도 선명하게
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
-    sizeChart(); drawChart();
+    layoutPanels(); sizeChart(); drawChart();
+    if (co.busy) placeCallout();
   }
   window.addEventListener("resize", resize); resize();
   let last = performance.now(), hudAcc = 0;

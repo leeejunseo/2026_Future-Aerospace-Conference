@@ -70,10 +70,20 @@ METHOD_LABELS = {"arm": "로봇팔", "net": "그물", "harpoon": "작살"}
 # 3D 장면의 색과 맞춘다 (그물 질점 #86e07f, 테더 #ffb457). 로봇팔은 뷰어의 강조색을 쓴다
 METHOD_COLORS = {"arm": "#5fc9ff", "net": "#86e07f", "harpoon": "#ffb457"}
 TARGET_ORDER = ["small", "medium", "large"]
-TARGET_LABELS = {"small": "소형 10 kg", "medium": "중형 500 kg", "large": "대형 2000 kg"}
+TARGET_LABELS = {"small": "소형 10 kg", "medium": "중형 500 kg", "large": "대형 2,000 kg"}
 TARGET_DESC = {"small": ("소형", "10 kg 큐브샛"), "medium": ("중형", "500 kg 위성"), "large": ("대형", "2,000 kg 로켓 단")}
 # 첫 화면 큰 그림으로 쓸 리플레이. 앞에 있는 방식의 썸네일이 있으면 그것을 쓴다
 HERO_PREFERENCE = ["net", "arm", "harpoon"]
+# 첫 화면에 싣는 팀 정보. 공군사관학교 마크는 assets/ 에 아래 이름의 그림이 있을 때만 붙는다
+TEAM = {"name": "영윤준서결", "members": ["배영윤", "최윤준", "이준서", "김결"]}
+EMBLEM_NAMES = ["afa_emblem.png", "afa_emblem.svg", "afa_emblem.webp", "afa_emblem.jpg"]
+# 결과 카드에 붙이는 해설. 오해받기 쉬운 결과에 원고와 같은 설명을 단다.
+# zero_at_rest 는 "정지한 대상에서도 0 %" 라는 문장의 전제라 빌드할 때 자료로 확인하고, 맞지 않으면 싣지 않는다
+RESULT_NOTES = {
+    ("large", "net"): {"zero_at_rest": True,
+                       "text": "그물 0 %는 회전하지 않는 대상에서도 0 %다. 한 변 5 m 그물이 지름 2 m·길이 3 m 원통"
+                               "(외접 지름 3.6 m)을 감싸지 못한 그물 크기의 한계이며, 더 큰 그물로는 달라질 수 있다."},
+}
 # 회전축 추가 실험(중형 대상). 축 설명은 README 의 회전축 표와 같다
 AXIS_ORDER = ["z", "x", "y"]
 AXIS_DESC = {"z": "본 실험 · 최대 관성축", "x": "접근축 방향 · 중간 관성축", "y": "태양전지판 방향 · 최소 관성축"}
@@ -189,7 +199,19 @@ def wrap_viewer(page: str, title: Optional[str], head: str = "") -> str:
 
 
 def nav_script(nav: Optional[Dict]) -> str:
-    return f"<script>window.__SITE_NAV__={json.dumps(nav, ensure_ascii=False)};</script>\n" if nav else ""
+    payload = json.dumps(nav, ensure_ascii=False).replace("</", "<\\/")
+    return f"<script>window.__SITE_NAV__={payload};</script>\n" if nav else ""
+
+
+# 템플릿에서 치환하는 자리. 템플릿을 고치다 하나라도 사라지면 궤적이 빠진 페이지가 조용히 만들어지고,
+# --standalone demo 는 그 페이지로 입력 파일을 덮어쓰므로 빌드 전에 멈춘다 (capture_sim.build_html 과 같은 검사)
+TEMPLATE_MARKERS = ["/*__DATA_JSON__*/window.__DEBRIS_DATA__ || null", "__EARTH_DATA_URI__", VIEWER_THREE_MARKER]
+
+
+def check_template(template: str) -> None:
+    missing = [m for m in TEMPLATE_MARKERS if m not in template]
+    if missing:
+        raise SystemExit("viewer_template.html 에서 치환 자리를 찾지 못했다: " + ", ".join(missing))
 
 
 def build_viewer_page(template: str, data_src: str, nav: Optional[Dict] = None, title: Optional[str] = None,
@@ -217,7 +239,7 @@ def build_standalone_page(template: str, data: Dict, three_js: str, earth_uri: s
 
 INDEX_CSS = """
 :root{color-scheme:dark;--bg:#03050b;--panel:rgba(14,20,34,.74);--line:#1d2940;--line2:#2b3a57;
---text:#eef2f9;--muted:#93a0b8;--dim:#66728c;--accent:#5fc9ff;--good:#4ad494;--bad:#ff6b6b;
+--text:#eef2f9;--muted:#93a0b8;--dim:#7f8ba5;--accent:#5fc9ff;--good:#4ad494;--bad:#ff6b6b;--warn:#f4b84a;
 --font:"Pretendard Variable",Pretendard,"IBM Plex Sans","Malgun Gothic",system-ui,sans-serif;
 --mono:"IBM Plex Mono",Consolas,monospace}
 *{box-sizing:border-box}
@@ -241,13 +263,17 @@ a{color:inherit}
 .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:52px;align-items:center;
 min-height:min(calc(100vh - 80px),860px);padding-bottom:48px}
 .hero.solo{grid-template-columns:minmax(0,1fr)}
-.hero h1{margin:16px 0 12px;font-size:clamp(34px,4.4vw,58px);line-height:1.14;font-weight:800;letter-spacing:-.04em;text-wrap:balance}
+.hero h1{margin:14px 0 12px;font-size:clamp(34px,4vw,56px);line-height:1.14;font-weight:800;letter-spacing:-.04em;text-wrap:balance}
 .hero h1 .hl{background:linear-gradient(95deg,#ffffff 0%,#b5e2ff 50%,#5fc9ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.subtitle{margin:0 0 22px;font-size:clamp(16px,1.6vw,20px);color:#c5cfe1;font-weight:500;letter-spacing:-.01em}
+.subtitle{margin:0 0 16px;font-size:clamp(16px,1.6vw,20px);color:#c5cfe1;font-weight:500;letter-spacing:-.01em}
+.team{display:flex;align-items:center;gap:12px;margin:0 0 20px}
+.team img{height:46px;width:auto;flex:none}
+.team b{display:block;font-size:15px;font-weight:700}
+.team span{color:var(--muted);font-size:14px}
 .lede{margin:0;color:var(--muted);font-size:15.5px;line-height:1.8;max-width:54ch}
-.facts{display:grid;grid-template-columns:repeat(4,auto);justify-content:start;gap:12px 30px;margin:28px 0 30px;
+.facts{display:flex;flex-wrap:wrap;gap:12px 22px;margin:24px 0 28px;
 padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.facts b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.facts b{display:block;font-size:clamp(18px,1.7vw,22px);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
 .facts span{font-size:12.5px;color:var(--muted)}
 .cta{display:flex;gap:10px;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;border:1px solid var(--line2);
@@ -281,11 +307,12 @@ section.wrap{padding-top:88px;scroll-margin-top:-60px}
 .rank1{padding:3px 7px;border-radius:6px;background:var(--c);color:#03111b;font-size:11.5px;font-weight:700}
 .res-rate{font-family:var(--mono);font-size:40px;font-weight:500;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .res-rate small{margin-left:2px;font-size:18px;color:var(--muted)}
-.res-cap{color:var(--dim);font-size:12px}
+.res-cap{color:var(--dim);font-size:12.5px}
+.res-note{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);color:var(--muted);font-size:12.5px;line-height:1.65}
 .chart{display:block;width:100%;height:auto;margin:12px 0 8px}
 .chart .grid{stroke:var(--line);stroke-width:1}
-.chart .tick{fill:var(--dim);font-size:10px;font-family:var(--mono)}
-.chart .axis{fill:var(--dim);font-size:10.5px}
+.chart .tick{fill:var(--dim);font-size:11.5px;font-family:var(--mono)}
+.chart .axis{fill:var(--dim);font-size:11.5px}
 .chart .band{opacity:.17}
 .chart polyline{fill:none;stroke-linejoin:round;stroke-linecap:round}
 .chart .win{stroke-width:3}
@@ -340,7 +367,7 @@ background:rgba(4,7,14,.76);backdrop-filter:blur(6px);-webkit-backdrop-filter:bl
 kbd{padding:1px 6px;border-radius:5px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);font-family:var(--mono);font-size:12px}
 footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px solid var(--line);color:var(--dim);font-size:12.5px}
 @media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;gap:36px;padding-top:8px}}
-@media (max-width:640px){.wrap{padding:0 16px}.topbar nav{display:none}.facts{grid-template-columns:1fr 1fr}section.wrap{padding-top:56px}
+@media (max-width:640px){.wrap{padding:0 16px}.topbar nav{display:none}.facts>div{flex:1 1 40%}section.wrap{padding-top:56px}
 .res-rate{font-size:34px}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 """
@@ -424,7 +451,7 @@ def fmt_p(p: Optional[float]) -> str:
     if p is None:
         return ""
     if p < 0.001:
-        return "p < 0.001"
+        return "p &lt; 0.001"
     return f"p = {p:.3f}" + (' · <span class="ns">유의하지 않음</span>' if p >= 0.05 else "")
 
 
@@ -482,6 +509,16 @@ def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
         tname, tdesc = TARGET_DESC.get(target, (target, ""))
         items = "".join(f'<li style="--c:{METHOD_COLORS[m]}"><i></i>{METHOD_LABELS[m]}<b>{r * 100:.1f}%</b></li>'
                         for m, r, _ in rank)
+        notes = []
+        for m, _, _ in rank:
+            note = RESULT_NOTES.get((target, m))
+            if not note:
+                continue
+            rest = [p for p in curves.get((target, m), []) if p["spin"] == 0]
+            if note.get("zero_at_rest") and not (rest and rest[0]["k"] == 0):
+                print(f"  해설 생략: {target}/{m} 는 정지 대상 성공률이 0 이 아니어서 해설 문장과 맞지 않는다")
+                continue
+            notes.append(f'<p class="res-note">{html.escape(note["text"])}</p>')
         cards.append(f"""
         <article class="res" style="--c:{METHOD_COLORS[win]}">
           <div class="res-target"><b>{tname}</b><span>{tdesc}</span></div>
@@ -491,7 +528,7 @@ def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
           </div>
           <div class="res-cap">회전하는 대상 포획 성공률</div>
           {success_chart(curves, target, win)}
-          <ol class="res-rank">{items}</ol>
+          <ol class="res-rank">{items}</ol>{"".join(notes)}
         </article>""")
     spins = sorted({p["spin"] for pts in curves.values() for p in pts if p["spin"] > 0})
     span = f"{spins[0]:g}–{spins[-1]:g} deg/s" if spins else "회전"
@@ -500,8 +537,8 @@ def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
     <div class="sec-head">
       <div class="eyebrow">핵심 결과</div>
       <h2>파편의 질량에 따라 가장 유효한 방식이 달라진다</h2>
-      <p>회전하는 대상({span})에 대한 방식별 포획 성공률이다. 조합마다 {n_per}회를 시뮬레이션했다.
-      곡선은 회전 속도별 성공률이고, 음영은 1위 방식의 95 % 신뢰구간이다.</p>
+      <p>큰 숫자와 순위는 회전하는 대상({span})만 모은 방식별 포획 성공률이다(조합마다 {n_per}회).
+      곡선은 정지(0 deg/s)를 포함한 회전 속도별 성공률이고, 음영은 1위 방식의 95 % 신뢰구간이다.</p>
     </div>
     <div class="grid3">{"".join(cards)}
     </div>{build_axis(axis) if axis else ""}
@@ -509,7 +546,7 @@ def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
 
 
 def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optional[Dict] = None,
-                axis: Optional[Dict] = None, site_url: str = SITE_URL) -> str:
+                axis: Optional[Dict] = None, site_url: str = SITE_URL, out_dir: Optional[str] = None) -> str:
     thumbs = thumbs or {}
     fx = scene_facts(runs)
 
@@ -534,8 +571,8 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
           <dl class="stats">
             <div><dt>감속 시간</dt><dd>{f'{float(ct):.1f} s' if ct else '—'}</dd></div>
             <div><dt>최대 충격량</dt><dd>{float(res.get('impulse', 0)):.1f} N·s</dd></div>
-            <div><dt>잔류 상대 각속도</dt><dd>{float(res.get('final_rel_omega_deg_s', 0)):.2f} °/s</dd></div>
-            <div><dt>서비서 자세 변화</dt><dd>{float(res.get('servicer_attitude_error', 0)):.0f}°</dd></div>
+            <div><dt>잔류 상대 각속도</dt><dd>{float(res.get('final_rel_omega_deg_s', 0)):.2f} deg/s</dd></div>
+            <div><dt>서비스 위성 최대 자세 변화</dt><dd>{float(res.get('servicer_attitude_error', 0)):.0f}°</dd></div>
           </dl>
         </div>
       </a>""")
@@ -557,10 +594,15 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
     replay_note = "방식마다 대표 시행을 물리 엔진이 계산한 궤적 그대로 재생한다. 시각화는 결과를 바꾸지 않는다."
     if multi:
         ms = [METHOD_LABELS.get(m, m) for m in METHOD_ORDER if (m, multi) in kinds]
-        replay_note = (f"{TARGET_DESC[multi][0]} {TARGET_DESC[multi][1]}은 {'·'.join(ms)}을 모두 실어 같은 대상에서 "
+        replay_note = (f"{TARGET_DESC[multi][0]} {TARGET_DESC[multi][1]}은 {'·'.join(ms)} 장면을 모두 넣어, 같은 대상에서 "
                        f"결과가 어떻게 갈리는지 비교할 수 있다. 물리 엔진이 계산한 궤적을 그대로 재생하며, 시각화는 결과를 바꾸지 않는다.")
 
-    facts, lede_runs = "", ""
+    # 팀 소개. 마크 그림이 있으면 왼쪽에 붙인다
+    emblem = next((f"assets/{n}" for n in EMBLEM_NAMES if os.path.exists(os.path.join(out_dir, "assets", n))), None) if out_dir else None
+    team = (f'<div class="team">' + (f'<img src="{emblem}" alt="공군사관학교 마크">' if emblem else "") +
+            f'<div><b>팀 {html.escape(TEAM["name"])}</b><span>{" · ".join(html.escape(m) for m in TEAM["members"])}</span></div></div>')
+
+    facts = ""
     total = 0
     if curves:
         total = sum(p["n"] for pts in curves.values() for p in pts)
@@ -572,11 +614,8 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
         <div><b>{total:,}회</b><span>몬테카를로 시행</span></div>
         <div><b>{len({k[1] for k in curves})}가지</b><span>포획 방식</span></div>
         <div><b>{masses} kg</b><span>파편 질량</span></div>
-        <div><b>{spins[0]:g}–{spins[-1]:g}°/s</b><span>회전 속도</span></div>
+        <div><b>{spins[0]:g}–{spins[-1]:g} deg/s</b><span>회전 속도</span></div>
       </div>"""
-        lede_runs = (f" 질량 {masses} kg 파편을 {spins[0]:g}–{spins[-1]:g} deg/s 로 회전시키고 "
-                     f"{total:,}회 포획을 시도해, 상대 각속도가 {fx['threshold']:g} deg/s 이하로 잦아들어 "
-                     f"{fx['hold']:g} 초 이상 유지되면 성공으로 셌다.")
     desc = (f"로봇팔·그물·작살의 회전 우주 파편 포획을 {total:,}회 물리 시뮬레이션으로 비교한 결과와 3D 리플레이"
             if total else "로봇팔·그물·작살의 회전 우주 파편 포획을 물리 시뮬레이션으로 비교한 3D 리플레이")
     og_image = thumbs.get(hero["name"]) if hero else None
@@ -588,8 +627,8 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>회전 우주 파편의 포획 방식 비교</title>
 <meta name="description" content="{html.escape(desc)}">
-{head_meta("회전 우주 파편의 포획 방식 비교", desc, site_url, site_url + og_image if og_image else None)}<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+{head_meta("회전 우주 파편의 포획 방식 비교", desc, site_url, site_url + og_image if og_image else None)}<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
 <style>{INDEX_CSS}</style>
 </head>
 <body>
@@ -604,8 +643,10 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
       <div class="eyebrow">2026 공군사관학교 미래 항공우주 학술대회</div>
       <h1>회전하는 우주 파편의<br><span class="hl">포획 방식 비교</span></h1>
       <p class="subtitle">로봇팔 · 그물 · 작살의 물리 시뮬레이션 기반 정량 평가</p>
+      {team}
       <p class="lede">지구 저궤도 파편은 대부분 회전하고 있어, 제거하려면 회전체를 안전하게 붙잡아야 한다.
-      PyBullet 다물체 동역학에 상대 궤도 역학을 더해 세 방식을 같은 조건에서 비교했다.{lede_runs}</p>{facts}
+      PyBullet 다물체 동역학에 상대 궤도 역학을 더해 세 방식을 같은 조건에서 비교했고, 대상과 서비스 위성의
+      상대 각속도가 {fx['threshold']:g} deg/s 이하로 잦아들어 {fx['hold']:g} 초 이상 유지되면 성공으로 셌다.</p>{facts}
       <div class="cta">{'<a class="btn primary" href="#results">핵심 결과 보기</a>' if curves else ''}<a class="btn{'' if curves else ' primary'}" href="#replays">3D 리플레이</a></div>
     </div>{hero_shot}
   </header>
@@ -629,17 +670,19 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
         <kbd>Space</kbd> 재생·정지, <kbd>1</kbd>~<kbd>4</kbd> 카메라 추적 대상,
         <kbd>P</kbd> 발표 모드(핵심 수치만 크게), <kbd>O</kbd> 카메라 자동 회전, <kbd>N</kbd> 그물 질점 표시.
         질점은 실제 충돌 반경으로 그려 그물이 솜뭉치처럼 보이므로, 발표 모드에서는 자동으로 숨겨 그물 선만 남긴다.
+        발표 모드는 다른 시나리오로 옮겨도 유지되고, 전체화면은 <kbd>F11</kbd> 로 켜야 옮겨도 풀리지 않는다.
       </div>
       <div>
         <h3>성공 판정</h3>
         대상과 서비스 위성의 상대 각속도가 {fx['threshold']:g} deg/s 이하로 떨어지고 그 상태가
         {fx['hold']:g} 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
         뷰어 그래프의 가로 점선이 이 기준이고, 초록 음영은 결합이 유지된 구간이다.
+        감속 시간은 첫 접촉부터 상대 각속도가 기준 아래로 내려갈 때까지 걸린 시간이다.
       </div>
     </div>
   </section>
 
-  <footer class="wrap">고도 {fx['altitude']:.0f} km 원궤도 기준 · 적분 간격 1/{round(1 / fx['timestep'])} s · 2026 공군사관학교 미래 항공우주 학술대회</footer>
+  <footer class="wrap">팀 {html.escape(TEAM['name'])} ({" · ".join(html.escape(m) for m in TEAM['members'])}) · 2026 공군사관학교 미래 항공우주 학술대회 · 고도 {fx['altitude']:.0f} km 원궤도 기준 · 적분 간격 1/{round(1 / fx['timestep'])} s</footer>
   <script>{SKY_JS}</script>
 </body>
 </html>
@@ -731,15 +774,25 @@ def capture_thumbs(out_dir: str, runs: List[Dict], size=(1280, 720)) -> None:
             for r in runs:
                 # nodes=0.3: 그물·테더 질점을 줄여 그물 모양이 보이게 한다 (논문 그림과 같은 방식)
                 url = f"http://127.0.0.1:{port}/runs/{r['name']}.html?clean&nodes=0.3&t={thumb_time(r['data']):.2f}"
-                png = os.path.join(thumbs_dir, r["name"] + ".png")
-                subprocess.run([browser, "--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
-                                "--hide-scrollbars", f"--window-size={size[0]},{size[1]}", "--virtual-time-budget=8000",
-                                f"--user-data-dir={profile}", f"--screenshot={png}", url],
-                               capture_output=True, timeout=180)
+                # 임시 폴더에 먼저 찍고, 성공했을 때만 기존 썸네일(jpg·png)을 바꾼다. 실패하면 이전 것을 남기고 알린다
+                png = os.path.join(profile, r["name"] + ".png")
+                try:
+                    subprocess.run([browser, "--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
+                                    "--hide-scrollbars", f"--window-size={size[0]},{size[1]}", "--virtual-time-budget=8000",
+                                    f"--user-data-dir={os.path.join(profile, 'browser')}", f"--screenshot={png}", url],
+                                   capture_output=True, timeout=180)
+                except subprocess.TimeoutExpired:
+                    pass
                 if not os.path.exists(png):
-                    print(f"  썸네일 실패: {r['name']}")
+                    print(f"  썸네일 실패: {r['name']} (이전 썸네일이 있으면 그대로 쓴다)")
                     continue
-                print(f"  썸네일 {r['name']:30s} -> {os.path.basename(to_jpeg(png))}")
+                for ext in ("jpg", "png"):
+                    old = os.path.join(thumbs_dir, f"{r['name']}.{ext}")
+                    if os.path.exists(old):
+                        os.remove(old)
+                dst = os.path.join(thumbs_dir, r["name"] + ".png")
+                shutil.move(png, dst)
+                print(f"  썸네일 {r['name']:30s} -> {os.path.basename(to_jpeg(dst))}")
     finally:
         httpd.shutdown()
 
@@ -761,6 +814,7 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
           standalone: Optional[str] = None, site_url: str = SITE_URL) -> List[Dict]:
     here = os.path.dirname(os.path.abspath(__file__))
     template = open(os.path.join(here, "viewer_template.html"), encoding="utf-8").read()
+    check_template(template)
     for sub in ("runs", "data", "assets"):
         os.makedirs(os.path.join(out_dir, sub), exist_ok=True)
 
@@ -772,11 +826,23 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
         if not os.path.exists(src):
             raise SystemExit(f"공유 자산이 없다: {src}")
         shutil.copyfile(src, os.path.join(out_dir, "assets", dst))
+    for n in EMBLEM_NAMES:                       # 공군사관학교 마크 (있을 때만)
+        if os.path.exists(os.path.join(here, "assets", n)):
+            shutil.copyfile(os.path.join(here, "assets", n), os.path.join(out_dir, "assets", n))
 
-    runs = []
+    runs, used = [], set()
     for path in inputs:
         data = load_trajectory(path)
         name = run_name(data, os.path.splitext(os.path.basename(path))[0])
+        # 이름은 방식·대상·회전 속도로만 짓는다(기존 주소를 지키려고). 시드나 회전 방식만 다른 시행이 겹치면 뒤에 붙여 구분한다
+        if name in used:
+            res = data.get("result", {})
+            base, name = name, f"{name}_s{res.get('seed', 0)}" + ("" if res.get("spin_mode", "principal") == "principal" else f"_{res['spin_mode']}")
+            k = 2
+            while name in used:
+                name, k = f"{base}_{k}", k + 1
+            print(f"  이름 겹침: {os.path.basename(path)} 은 {name} 로 쓴다")
+        used.add(name)
         payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
         with open(os.path.join(out_dir, "data", f"{name}.js"), "w", encoding="utf-8") as f:
             f.write("window.__DEBRIS_DATA__=" + payload + ";\n")
@@ -793,7 +859,7 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
     for r, (m, t) in zip(runs, kinds):
         label = f"{METHOD_LABELS.get(m, m)} · {TARGET_DESC.get(t, (t, ''))[0]}"
         if kinds.count((m, t)) > 1:
-            label += f" {float(r['data'].get('result', {}).get('spin_deg_s', 0)):g}°/s"
+            label += f" {float(r['data'].get('result', {}).get('spin_deg_s', 0)):g} deg/s"
         nav_runs.append({"name": r["name"], "href": f"{r['name']}.html", "label": label,
                          "color": METHOD_COLORS.get(m, "#5fc9ff")})
     titles = {r["name"]: f"{METHOD_LABELS.get(m, m)} 포획 · {TARGET_LABELS.get(t, t)} · 3D 리플레이"
@@ -818,7 +884,7 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
     curves = load_summary(summary or os.path.join(here, "results", "results_summary.csv"))
     axis = load_axis(os.path.join(here, "results_axis"))
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(build_index(runs, curves, found, axis, site_url))
+        f.write(build_index(runs, curves, found, axis, site_url, out_dir))
 
     # 오프라인 발표 대비용 단독 HTML. 첫 화면이 없으므로 이동 막대에는 시나리오끼리만 잇는다
     if standalone:
