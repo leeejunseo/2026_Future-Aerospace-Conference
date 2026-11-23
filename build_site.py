@@ -680,7 +680,7 @@ def rate_at(curves: Dict, target: str, method: str, spin: float) -> Optional[flo
 
 
 def build_costs(curves: Dict, costs: Dict) -> str:
-    """'포획의 대가' 절: 대상·방식별 성공률, 감속 시간, 잔류 각속도, 최대 충격량, 서비스 위성 자세 변화 표.
+    """'세부 지표' 절: 대상·방식별 성공률, 감속 시간, 잔류 각속도, 최대 충격량, 서비스 위성 자세 변화 표.
     값 옆 막대는 같은 열 안에서 비교하라는 표시다. 감속 시간은 초와 분이 섞여 로그 눈금으로 그린다."""
     max_time = float(CONFIG["sim"]["max_time"]) if CONFIG is not None else 180.0
     present = [(t, m) for t in TARGET_ORDER for m in METHOD_ORDER if (t, m) in costs]
@@ -740,7 +740,7 @@ def build_costs(curves: Dict, costs: Dict) -> str:
     return f"""
   <section id="costs" class="wrap">
     <div class="sec-head">
-      <div class="eyebrow">포획의 대가</div>
+      <div class="eyebrow">세부 지표</div>
       <h2>성공해도 감속에 걸리는 시간은 초 단위와 분 단위로 갈린다</h2>
       <p>포획은 성공 여부만으로 끝나지 않는다. 성공률을 뺀 네 지표는 막대가 짧을수록 좋다.
       감속 시간은 회전 대상에서 성공한 시행의 중앙값(로그 눈금), 잔류 상대 각속도는 중앙값,
@@ -799,7 +799,7 @@ def build_conclusions(curves: Dict, costs: Optional[Dict], axis: Optional[Dict],
             body = (f"성공해도 감속 시간이 로봇팔 {min(arm_ct):.1f}~{max(arm_ct):.1f} s, 그물·작살 {min(teth):.0f}~{max(teth):.0f} s 로 "
                     "크게 달랐다. " + body)
     items.append(("성공 여부만으로는 부족하다", body,
-                  ('<a href="#costs">포획의 대가</a>' if costs else "") + link("arm", "small", "로봇팔 · 소형 성공")))
+                  ('<a href="#costs">세부 지표</a>' if costs else "") + link("arm", "small", "로봇팔 · 소형 성공")))
 
     # 4. 빠를수록 어렵다는 직관이 깨진다
     a, b = rate_at(curves, "medium", "net", 0), rate_at(curves, "medium", "net", 18)
@@ -815,7 +815,7 @@ def build_conclusions(curves: Dict, costs: Optional[Dict], axis: Optional[Dict],
     body = "대상의 각운동량이 서비스 위성으로 옮겨 가므로, 방식을 고를 때 서비스 위성의 자세 제어 용량을 함께 따져야 한다."
     if len(med) == len(METHOD_ORDER):
         body = f"중형 대상에서는 세 방식 모두 서비스 위성이 평균 {min(med):.0f}° 이상 돌아갔다. " + body
-    items.append(("포획에는 서비스 위성 자세라는 대가가 따른다", body, link("harpoon", "medium", "작살 · 중형 성공")))
+    items.append(("포획하면 서비스 위성의 자세도 크게 흔들린다", body, link("harpoon", "medium", "작살 · 중형 성공")))
 
     cards = "".join(f"""
       <article>
@@ -875,7 +875,7 @@ def run_note(r: Dict) -> Optional[str]:
     elif (method, target) == ("net", "medium") and ok:
         text = "형상과 상관없이 감쌀 수 있는 그물은 태양전지판에 걸려 오히려 유리하다. 중형에서 그물이 1위인 이유다."
     elif (method, target) == ("harpoon", "medium") and ok and att >= 90:
-        text = f"포획에는 성공했지만 서비스 위성이 {att:.0f}° 돌아갔다. 대상의 각운동량이 옮겨 온 결과로, 포획의 대가다 (결론 5)."
+        text = f"포획에는 성공했지만 서비스 위성이 {att:.0f}° 돌아갔다. 대상의 각운동량이 서비스 위성으로 옮겨 온 결과다 (결론 5)."
     elif (method, target) == ("net", "large") and not ok:
         est, lost = _num(res.get("bond_established_time")), _num(res.get("bond_lost_time"))
         text = ("한 변 5 m 그물이 지름 2 m·길이 3 m 원통을 감싸지 못해 "
@@ -985,7 +985,7 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
   <canvas class="sky" aria-hidden="true"></canvas>
   <div class="topbar wrap">
     <a class="brand" href="#"><i></i>회전 우주 파편 포획 시뮬레이션</a>
-    <nav>{'<a href="#results">핵심 결과</a>' if curves else ''}{'<a href="#costs">포획의 대가</a>' if costs else ''}{'<a href="#conclusion">결론</a>' if curves else ''}<a href="#replays">3D 리플레이</a><a href="#method">조건·한계</a><a href="#guide">보는 법</a></nav>
+    <nav>{'<a href="#results">핵심 결과</a>' if curves else ''}{'<a href="#costs">세부 지표</a>' if costs else ''}{'<a href="#conclusion">결론</a>' if curves else ''}<a href="#replays">3D 리플레이</a><a href="#method">조건·한계</a><a href="#guide">보는 법</a></nav>
   </div>
 
   <header class="hero wrap{'' if hero_shot else ' solo'}">
