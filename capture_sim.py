@@ -1098,6 +1098,7 @@ class RobotArmCapture(CaptureMethod):
     def trajectory_static(self):
         a = self.acfg
         return {"arm": {"link_lengths": list(a["link_lengths"]), "link_radius": a["link_radius"],
+                        "joint_axes": [list(ax) for ax in a["joint_axes"]],   # 뷰어가 관절 드럼을 회전축 방향으로 그린다
                         "tool_radius": a["tool_radius"],
                         "gripper_parts": SpacecraftVisuals.parts_to_json(SpacecraftVisuals.gripper_parts(a["tool_radius"]))}}
 

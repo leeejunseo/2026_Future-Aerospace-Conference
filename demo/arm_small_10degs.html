@@ -496,18 +496,53 @@
   const servicer = buildParts(S.servicer.parts); scene.add(servicer);
   const attachLocal = V3(...S.servicer.attach);
 
-  // 로봇팔
+  // 로봇팔. 물리 모델은 링크마다 반지름 link_radius 캡슐이고, 링크 프레임 원점이 곧 관절이다(링크는 +x 로 뻗는다).
+  // 그림은 기록된 링크 위치·자세를 그대로 따르고 겉모양만 우주 로봇팔처럼 꾸민다:
+  // 흰 단열 도장 붐, 관절마다 회전축 방향으로 놓인 모터 드럼과 강조색 고리, 서비스 위성 면의 장착 플랜지
   const armLinks = [];
   if (S.arm) {
-    const a = S.arm;
+    const a = S.arm, R = a.link_radius;
+    // 관절 회전축(링크 프레임 기준). 예전 궤적 자료에는 없어서 capture_sim 기본값(요-피치-피치-피치-요-롤)을 쓴다
+    const AXES = a.joint_axes || [[0, 0, 1], [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0]];
+    // 이 렌더러는 sRGB 로 출력하므로 16진 색을 선형 값으로 바꿔 넣어야 눈에 보이는 색이 그 16진 색과 같다
+    const srgb = (h) => new THREE.Color(h).convertSRGBToLinear();
+    const mBoom = new THREE.MeshStandardMaterial({ color: srgb(0xe6e9ee), roughness: 0.55, metalness: 0.1 });
+    const mCollar = new THREE.MeshStandardMaterial({ color: srgb(0x2b313c), roughness: 0.55, metalness: 0.25 });
+    const mDrum = new THREE.MeshStandardMaterial({ color: srgb(0x353c49), roughness: 0.5, metalness: 0.3 });
+    const mHub = new THREE.MeshStandardMaterial({ color: srgb(0x9aa3b1), roughness: 0.4, metalness: 0.4 });
+    const mGlow = new THREE.MeshStandardMaterial({ color: srgb(0x5fc9ff), emissive: srgb(0x5fc9ff), emissiveIntensity: 1.6, roughness: 0.4 });
+    const Yax = V3(0, 1, 0), Zax = V3(0, 0, 1);
+    const turn = (geo, from, to) => geo.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(from, to)));
+    function jointDrum(axis) {
+      const g = new THREE.Group(), ax = V3(...axis).normalize();
+      g.add(new THREE.Mesh(turn(new THREE.CylinderGeometry(R * 1.5, R * 1.5, R * 2.4, 40), Yax, ax), mDrum));
+      g.add(new THREE.Mesh(turn(new THREE.CylinderGeometry(R * 0.9, R * 0.9, R * 2.9, 32), Yax, ax), mHub));
+      g.add(new THREE.Mesh(turn(new THREE.TorusGeometry(R * 1.53, R * 0.17, 10, 48), Zax, ax), mGlow));
+      return g;
+    }
     a.link_lengths.forEach((L, i) => {
       const g = new THREE.Group();
-      const geo = new THREE.CylinderGeometry(a.link_radius, a.link_radius, L, 24); geo.rotateZ(-Math.PI / 2); geo.translate(L / 2, 0, 0);
-      g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: i % 2 ? 0x3a3a40 : 0xd9dbe0, roughness: 0.45, metalness: 0.5 })));
-      g.add(new THREE.Mesh(new THREE.SphereGeometry(a.link_radius * 1.25, 20, 14), new THREE.MeshStandardMaterial({ color: 0x2a2f3a, roughness: 0.5, metalness: 0.6 })));
+      const boom = new THREE.CylinderGeometry(R * 0.92, R * 0.92, L, 32); boom.rotateZ(-Math.PI / 2); boom.translate(L / 2, 0, 0);
+      g.add(new THREE.Mesh(boom, mBoom));
+      const c = Math.min(0.09, L * 0.3);
+      for (const x of (L > 0.25 ? [c, L - c] : [L / 2])) {
+        const col = new THREE.CylinderGeometry(R * 1.12, R * 1.12, 0.03, 32); col.rotateZ(-Math.PI / 2); col.translate(x, 0, 0);
+        g.add(new THREE.Mesh(col, mCollar));
+      }
+      g.add(jointDrum(AXES[i] || [0, 0, 1]));
       scene.add(g); armLinks.push(g);
     });
-    const tool = buildParts(a.gripper_parts); scene.add(tool); armLinks.push(tool);
+    // 장착 플랜지: 서비스 위성 면(장착점 방향이 면의 법선)에 붙여 위성과 함께 움직인다
+    const nrm = attachLocal.clone().normalize();
+    const flange = turn(new THREE.CylinderGeometry(R * 2.6, R * 3, 0.014, 48), Yax, nrm);
+    flange.translate(attachLocal.x + nrm.x * 0.007, attachLocal.y + nrm.y * 0.007, attachLocal.z + nrm.z * 0.007);
+    servicer.add(new THREE.Mesh(flange, mCollar));
+    // 그리퍼: 자료의 손바닥 구와 손가락 3 개를 그대로 쓰고 색만 맞춘다. 손바닥 앞(+x)에 강조색 고리를 둘러 끝단을 표시한다
+    const tool = buildParts(a.gripper_parts);
+    tool.children.forEach((m, k) => { m.material = k === 0 ? mDrum : mHub; });
+    const ring = new THREE.TorusGeometry(a.tool_radius * 1.04, R * 0.16, 10, 40); ring.rotateY(Math.PI / 2);
+    tool.add(new THREE.Mesh(ring, mGlow));
+    scene.add(tool); armLinks.push(tool);
   }
 
   // 그물 / 테더 (질점 + 스프링 선)

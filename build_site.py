@@ -1060,10 +1060,11 @@ VERCEL_JSON = """{
 # =============================================================================
 # 썸네일
 # =============================================================================
+# Chrome 을 먼저 쓴다. Edge 는 백그라운드에서 이미 돌고 있으면 헤드리스 실행이 그림 없이 바로 끝나는 일이 있었다
 BROWSERS = [
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "google-chrome", "chromium", "chromium-browser", "microsoft-edge",
 ]
