@@ -52,7 +52,6 @@ import math
 import os
 import re
 import shutil
-import statistics
 from typing import Dict, List, Optional
 from urllib.parse import quote
 
@@ -641,7 +640,10 @@ def load_costs(summary_path: str, raw_path: str) -> Optional[Dict]:
     """성공률 밖의 지표를 원고와 같은 기준으로 계산한다. 두 파일 중 하나라도 없으면 None.
     잔류 각속도·최대 충격량·서비스 위성 자세 변화는 원고 표 2 기준이다: 정지를 포함한 회전 속도 16 칸에서
     잔류 각속도는 칸 중앙값들의 중앙값(위쪽), 충격량과 자세 변화는 칸 평균들의 평균.
-    감속 시간은 원고 표 3 기준이다: 회전 대상(> 0 deg/s)에서 성공한 시행의 중앙값."""
+    감속 시간은 원고 표 3 기준이다: 회전 대상(> 0 deg/s)에서 성공한 시행의 중앙값.
+    원고 표 3 은 시행 수가 짝수일 때 가운데 두 값의 평균이 아니라 아래쪽 값을 중앙값으로 썼다
+    (numpy percentile method="lower" 와 같다. 표 3 의 24 개 값이 모두 이 방식으로 정확히 재현된다).
+    원고와 숫자가 어긋나지 않도록 같은 방식을 쓴다. 예: 작살 대형 24 회의 12·13 번째 값 139.3·145.1 s → 139.3 s"""
     if not (os.path.exists(summary_path) and os.path.exists(raw_path)):
         return None
     cells: Dict = {}
@@ -659,8 +661,9 @@ def load_costs(summary_path: str, raw_path: str) -> Optional[Dict]:
         rel = sorted(v for v in (_num(r["final_rel_omega_median_deg_s"]) for r in g) if v is not None)
         imp = [v for v in (_num(r["impulse_mean_Ns"]) for r in g) if v is not None]
         att = [v for v in (_num(r["servicer_attitude_error_mean_deg"]) for r in g) if v is not None]
-        t = times.get(key, [])
-        out[key] = {"capture": statistics.median(t) if t else None, "n_capture": len(t),
+        t = sorted(times.get(key, []))
+        out[key] = {"capture": t[(len(t) - 1) // 2] if t else None, "n_capture": len(t),   # 아래쪽 중앙값
+                    "capture_q": (t[(len(t) - 1) // 4], t[3 * (len(t) - 1) // 4]) if t else None,
                     "rel": rel[len(rel) // 2] if rel else None,
                     "impulse": sum(imp) / len(imp) if imp else None,
                     "attitude": sum(att) / len(att) if att else None}
