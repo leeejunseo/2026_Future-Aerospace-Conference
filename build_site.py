@@ -861,30 +861,33 @@ def build_method() -> str:
 
 
 def run_note(r: Dict) -> Optional[str]:
-    """리플레이 카드의 해설 한 줄. 장면을 원고의 결론과 잇는다. 장면 자료가 해설의 전제와 맞을 때만 단다."""
+    """리플레이 카드의 해설 한 줄. 장면을 원고의 결론과 잇는다. 장면 자료가 해설의 전제와 맞을 때만 단다.
+    시간 창(180 s)보다 짧게 기록한 장면이면 그 사실을 끝에 붙인다."""
     method, target = run_kind(r)
     res, status = r["data"].get("result", {}), r["data"].get("status_table", [])
     ok, ct = bool(res.get("success")), _num(res.get("capture_time"))
     att = _num(res.get("servicer_attitude_error")) or 0.0
+    text = None
     if (method, target) == ("arm", "medium") and not ok and not any(re.search(r"phase=(close|grasped)", s) for s in status):
-        return "태양전지판이 서비스 위성과 먼저 부딪혀 파지 단계에 들어가지 못했다. 돌출 구조물이 로봇팔의 약점이다 (결론 2)."
-    if (method, target) == ("arm", "small") and ok and ct is not None:
-        return f"강체로 붙잡아 첫 접촉 후 {ct:.1f} s 만에 감속했다. 그물·작살은 같은 감속에 수십~백수십 초가 걸린다 (결론 3)."
-    if (method, target) == ("net", "medium") and ok:
-        return "형상과 상관없이 감쌀 수 있는 그물은 태양전지판에 걸려 오히려 유리하다. 중형에서 그물이 1위인 이유다."
-    if (method, target) == ("harpoon", "medium") and ok and att >= 90:
-        return f"포획에는 성공했지만 서비스 위성이 {att:.0f}° 돌아갔다. 대상의 각운동량이 옮겨 온 결과로, 포획의 대가다 (결론 5)."
-    if (method, target) == ("net", "large") and not ok:
+        text = "태양전지판이 서비스 위성과 먼저 부딪혀 파지 단계에 들어가지 못했다. 돌출 구조물이 로봇팔의 약점이다 (결론 2)."
+    elif (method, target) == ("arm", "small") and ok and ct is not None:
+        text = f"강체로 붙잡아 첫 접촉 후 {ct:.1f} s 만에 감속했다. 그물·작살은 같은 감속에 수십~백수십 초가 걸린다 (결론 3)."
+    elif (method, target) == ("net", "medium") and ok:
+        text = "형상과 상관없이 감쌀 수 있는 그물은 태양전지판에 걸려 오히려 유리하다. 중형에서 그물이 1위인 이유다."
+    elif (method, target) == ("harpoon", "medium") and ok and att >= 90:
+        text = f"포획에는 성공했지만 서비스 위성이 {att:.0f}° 돌아갔다. 대상의 각운동량이 옮겨 온 결과로, 포획의 대가다 (결론 5)."
+    elif (method, target) == ("net", "large") and not ok:
         est, lost = _num(res.get("bond_established_time")), _num(res.get("bond_lost_time"))
         text = ("한 변 5 m 그물이 지름 2 m·길이 3 m 원통을 감싸지 못해 "
                 + (f"붙은 지 {lost - est:.1f} s 만에 벗겨졌다" if est is not None and lost is not None else "결합하지 못했다")
                 + ". 대형에서 그물이 0 %인 이유다 (결론 2).")
-        max_time = float(CONFIG["sim"]["max_time"]) if CONFIG is not None else 180.0
-        sim_time = _num(res.get("sim_time")) or max_time
-        if sim_time < max_time - 1 and r["data"].get("frames"):
-            text += f" 장면은 앞 {r['data']['frames'][-1]['t']:.0f} s 만 기록했다."
-        return text
-    return None
+    if text is None:
+        return None
+    max_time = float(CONFIG["sim"]["max_time"]) if CONFIG is not None else 180.0
+    sim_time = _num(res.get("sim_time")) or max_time
+    if sim_time < max_time - 1 and r["data"].get("frames"):
+        text += f" 장면은 앞 {r['data']['frames'][-1]['t']:.0f} s 만 기록했다."
+    return text
 
 
 def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optional[Dict] = None,
