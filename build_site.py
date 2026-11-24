@@ -619,8 +619,9 @@ def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
   <section id="results" class="wrap">
     <div class="sec-head">
       <div class="eyebrow">핵심 결과</div>
-      <h2>파편의 질량에 따라 가장 유효한 방식이 달라진다</h2>
-      <p>큰 숫자와 순위는 회전하는 대상({span})만 모은 방식별 포획 성공률이다(조합마다 {n_per}회).
+      <h2>파편의 종류에 따라 가장 유효한 방식이 달라진다</h2>
+      <p>세 대상은 질량만이 아니라 형상과 관성도 다르므로, 결과는 질량 하나의 효과가 아니라 대상 전체의 차이다.
+      큰 숫자와 순위는 회전하는 대상({span})만 모은 방식별 포획 성공률이다(조합마다 {n_per}회).
       곡선은 정지(0 deg/s)를 포함한 회전 속도별 성공률이고, 음영은 1위 방식의 95 % 신뢰구간이다.</p>
     </div>
     <div class="grid3">{"".join(cards)}
@@ -1027,6 +1028,8 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
         대상과 서비스 위성의 상대 각속도가 {fx['threshold']:g} deg/s 이하로 떨어지고 그 상태가
         {fx['hold']:g} 초 이상 유지되며 결합이 끊기지 않으면 성공으로 본다.
         뷰어 그래프의 가로 점선이 이 기준이고, 초록 음영은 결합이 유지된 구간이다.
+        보라색 선은 관성계 기준 대상 각속도다. 상대 회전이 멈춰도 결합체 전체는 돌 수 있고(각운동량 보존),
+        그 회전을 없애는 일은 포획 뒤 서비스 위성의 자세 제어 몫이라 이 연구의 범위 밖이다.
         감속 시간은 첫 접촉부터 상대 각속도가 기준 아래로 내려갈 때까지 걸린 시간이다.
       </div>
       <div>

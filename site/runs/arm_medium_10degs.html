@@ -193,9 +193,9 @@
       <div class="tile"><div class="k">상태</div><div class="v" id="tStatus" style="font-family:var(--font);font-size:13px;line-height:1.3">—</div></div>
     </div>
     <div class="chartbox">
-      <div class="eyebrow">상대 각속도 추이 · 성공 기준 <span id="thrLabel">1</span> deg/s</div>
+      <div class="eyebrow">각속도 추이 · 성공 기준 상대 각속도 <span id="thrLabel">1</span> deg/s</div>
       <canvas id="chart" width="560" height="240"></canvas>
-      <div class="legend"><span><i></i>상대 각속도</span><span><i style="background:var(--good)"></i>결합 유지 구간</span><span><i style="background:var(--warn);height:1px"></i>성공 기준</span></div>
+      <div class="legend"><span><i></i>상대 각속도</span><span><i style="background:#b99cff"></i>대상 각속도(관성계)</span><span><i style="background:var(--good)"></i>결합 유지 구간</span><span><i style="background:var(--warn);height:1px"></i>성공 기준</span></div>
     </div>
     <div class="eyebrow ev">주요 사건</div>
     <div class="events" id="events"></div>
@@ -829,7 +829,9 @@
 
   // ---------------------------------------------------------------- 차트
   const chartCtx = ui.chart.getContext("2d");
-  const relMax = Math.max(THR * 3, ...F.map((f) => f.rel)) * 1.08;
+  // 대상의 관성계 각속도 |ω|. 상대 각속도가 0 이 되어도 결합체 전체는 돌 수 있다는 것을 같은 그래프에 보여 준다
+  const WDEG = F.map((f) => THREE.MathUtils.radToDeg(Math.hypot(f.w[0], f.w[1], f.w[2])));
+  const relMax = Math.max(THR * 3, ...F.map((f) => f.rel), ...WDEG) * 1.08;
   // 백킹 스토어를 CSS 크기 x DPR 로 맞춰 눈금 글자가 뭉개지지 않게 한다
   function sizeChart() {
     const r = ui.chart.getBoundingClientRect(); if (!r.width) return;
@@ -847,8 +849,14 @@
     g.fillStyle = "rgba(255,255,255,0.025)"; g.fillRect(L, T, pw, ph);
     const X = (t) => L + (t / T_END) * pw, Y = (v) => T + ph - (Math.min(v, relMax) / relMax) * ph;
     // bond 구간
+    // 이어진 결합 구간을 사각형 하나로 칠한다. 프레임마다 칠하면 긴 장면에서 반투명이 겹쳐 쌓여 진한 초록 덩어리가 됐다
     g.fillStyle = "rgba(74,212,148,0.14)";
-    for (let i = 0; i < F.length - 1; i++) if (F[i].bond) g.fillRect(X(F[i].t), T, Math.max(1, X(F[i + 1].t) - X(F[i].t)), ph);
+    for (let i = 0; i < F.length - 1; i++) {
+      if (!F[i].bond) continue;
+      let j = i; while (j < F.length - 1 && F[j].bond) j++;
+      g.fillRect(X(F[i].t), T, Math.max(1, X(F[j].t) - X(F[i].t)), ph);
+      i = j;
+    }
     // 격자·눈금
     g.strokeStyle = "#223047"; g.lineWidth = 1; g.font = "11px IBM Plex Mono, Consolas, monospace"; g.fillStyle = "#a3adc2"; g.textAlign = "right"; g.textBaseline = "middle";
     const ticks = niceTicks(0, relMax, 3);
@@ -859,7 +867,9 @@
     g.textAlign = "right"; g.fillText("s", L + pw, T + ph + 4);
     // 임계값
     g.setLineDash([4, 4]); g.strokeStyle = "#f4b84a"; g.beginPath(); g.moveTo(L, Y(THR)); g.lineTo(L + pw, Y(THR)); g.stroke(); g.setLineDash([]);
-    // 시계열
+    // 시계열: 대상 관성계 각속도(보라)를 먼저, 성공 판정에 쓰는 상대 각속도(하늘)를 위에 그린다
+    g.strokeStyle = "rgba(185,156,255,0.9)"; g.lineWidth = 1.3; g.beginPath();
+    F.forEach((f, i) => { const x = X(f.t), y = Y(WDEG[i]); if (i) g.lineTo(x, y); else g.moveTo(x, y); }); g.stroke();
     g.strokeStyle = "#5fc9ff"; g.lineWidth = 1.8; g.beginPath();
     F.forEach((f, i) => { const x = X(f.t), y = Y(f.rel); if (i) g.lineTo(x, y); else g.moveTo(x, y); }); g.stroke();
     // 이벤트
