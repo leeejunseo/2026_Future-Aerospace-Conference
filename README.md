@@ -288,7 +288,7 @@ python build_site.py --inputs a.json b.html --out site
 궤적 JSON(`--trajectory`)을 직접 줘도 된다.
 
 첫 화면은 발표용으로 꾸몄다. 연구 소개와 실험 규모, 대상별 회전 속도-성공률 곡선(핵심 결과),
-회전축 추가 실험 카드, 세부 지표 표, 결론 다섯 가지, 썸네일이 붙은 리플레이 목록, 실험 조건과 한계, 보는 법 순서다. 핵심 결과는 `results/results_summary.csv` 에서,
+회전축 추가 실험 카드, 세부 지표 표, 결론 다섯 가지, 썸네일이 붙은 리플레이 목록, 실험 조건과 한계, 자주 받는 질문, 보는 법 순서다. 핵심 결과는 `results/results_summary.csv` 에서,
 회전축 카드는 `results_axis/axis_summary.csv`·`axis_tests.csv` 에서 그린다. 원고 요약문과 같은 기준(회전하는 대상만
 집계)이라 수치가 원고와 일치한다. CSV 가 없으면 그 절만 빠진다. 리플레이는 대상 → 방식 순으로 놓여
 중형 위성에서 로봇팔(실패)·그물·작살이 나란히 비교된다.
@@ -298,6 +298,9 @@ python build_site.py --inputs a.json b.html --out site
 `results/results_summary.csv` 와 `results/results_raw.csv` 에서 다시 계산한다. 결론 카드의 숫자도 자료에서 계산하고,
 근거가 되는 절과 리플레이로 가는 링크를 단다. 실험 조건과 한계(`METHOD_SPEC`·`LIMITS`)는 원고 표 1·4.7 절을
 옮긴 글이라 원고를 고치면 같이 고친다. 리플레이 카드의 해설 한 줄(`run_note`)은 장면 자료가 해설의 전제와 맞을 때만 붙는다.
+결과 카드마다 1·2위 차이의 McNemar p(Holm 보정, `comparison/compare_by_target.csv`, 원고 표 4)를 붙인다.
+자주 받는 질문(`build_faq`)은 심사에서 나올 만한 다섯 질문(질량과 형상, 상대 각속도 판정, 모델 검증, 선행 연구, 공정성)에
+자료로 다시 계산한 숫자와 근거로 가는 링크를 붙여 답한다. 질의응답 때 띄워 두는 예비 슬라이드 구실을 한다.
 `assets/site_qr.svg`(사이트 주소 QR)가 있으면 '휴대폰으로 보기' 칸에 붙는다. 슬라이드에는 `assets/site_qr.png` 를 쓴다.
 팀 이름과 팀원은 `TEAM` 에 있다. 공군사관학교 마크는 `assets/afa_emblem.png`(또는 .svg·.webp·.jpg)를 두면
 팀 소개 옆에 붙는다.

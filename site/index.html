@@ -85,6 +85,9 @@ section.wrap{padding-top:88px;scroll-margin-top:-60px}
 .res-rate{font-family:var(--mono);font-size:40px;font-weight:500;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .res-rate small{margin-left:2px;font-size:18px;color:var(--muted)}
 .res-cap{color:var(--dim);font-size:12.5px}
+.res-sig{margin:12px 0 0;color:var(--muted);font-size:13px}
+.res-sig b{color:var(--good);font-family:var(--mono);font-weight:500}
+.res-sig span{display:block;color:var(--dim);font-size:11.5px}
 .res-note{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);color:var(--muted);font-size:12.5px;line-height:1.65}
 .chart{display:block;width:100%;height:auto;margin:12px 0 8px}
 .chart .grid{stroke:var(--line);stroke-width:1}
@@ -165,6 +168,21 @@ color:var(--muted);font-size:13.5px;line-height:1.7}
 .limits li{margin-bottom:10px}
 .limits li::marker{color:var(--dim)}
 .limits b{color:var(--text);font-weight:600}
+.faq{display:grid;gap:10px}
+.faq details{border-radius:14px;background:var(--panel);border:1px solid var(--line);scroll-margin-top:16px}
+.faq details[open]{border-color:var(--line2)}
+.faq summary{display:flex;align-items:baseline;gap:12px;padding:16px 20px;cursor:pointer;list-style:none;font-size:15.5px;font-weight:700;line-height:1.5}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";margin-left:auto;padding-left:12px;color:var(--muted);font-size:20px;font-weight:400;line-height:1}
+.faq details[open] summary::after{content:"−"}
+.faq summary:hover{color:var(--accent)}
+.faq .q{flex:none;color:var(--accent);font-family:var(--mono);font-size:13px;font-weight:500}
+.faq .a{padding:0 20px 18px 48px;color:var(--muted);font-size:14.5px;line-height:1.8}
+.faq .a p{margin:0 0 8px}
+.faq .a ul{margin:0 0 8px;padding-left:20px}
+.faq .a li{margin-bottom:4px}
+.faq .a b{color:var(--text);font-weight:600}
+.faq .ev{padding-top:8px}
 .run-note{margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px;line-height:1.65}
 .qr{display:flex;gap:16px;align-items:flex-start}
 .qr img{flex:none;width:112px;height:112px;padding:6px;border-radius:10px;background:#fff}
@@ -198,7 +216,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
 @media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;gap:36px;padding-top:8px}
 .method{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:860px){.swipe{display:block}}
-@media (max-width:640px){.wrap{padding:0 16px}.topbar nav{display:none}.facts>div{flex:1 1 40%}section.wrap{padding-top:56px}
+@media (max-width:640px){.faq .a{padding-left:20px}.wrap{padding:0 16px}.topbar nav{display:none}.facts>div{flex:1 1 40%}section.wrap{padding-top:56px}
 .res-rate{font-size:34px}.spec{grid-template-columns:minmax(0,1fr);gap:0}.spec dd{margin-bottom:10px}.qr img{display:none}
 .cost{min-width:0;font-size:13px}.cost th,.cost td{padding:8px 9px}.cost .tg span,.v>span,.cost th small{display:none}.v{display:block}.cost .m em{display:none}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
@@ -208,7 +226,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
   <canvas class="sky" aria-hidden="true"></canvas>
   <div class="topbar wrap">
     <a class="brand" href="#"><i></i>회전 우주 파편 포획 시뮬레이션</a>
-    <nav><a href="#results">핵심 결과</a><a href="#costs">세부 지표</a><a href="#conclusion">결론</a><a href="#replays">3D 리플레이</a><a href="#method">조건·한계</a><a href="#guide">보는 법</a></nav>
+    <nav><a href="#results">핵심 결과</a><a href="#costs">세부 지표</a><a href="#conclusion">결론</a><a href="#replays">3D 리플레이</a><a href="#method">조건·한계</a><a href="#faq">질문</a><a href="#guide">보는 법</a></nav>
   </div>
 
   <header class="hero wrap">
@@ -251,7 +269,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
           </div>
           <div class="res-cap">회전하는 대상 포획 성공률</div>
           <svg class="chart" viewBox="0 0 320 172" role="img" aria-label="소형 대상의 회전 속도별 방식 성공률"><line class="grid" x1="36" x2="312" y1="140.0" y2="140.0"/><text class="tick" x="30" y="143.5" text-anchor="end">0%</text><line class="grid" x1="36" x2="312" y1="74.0" y2="74.0"/><text class="tick" x="30" y="77.5" text-anchor="end">50%</text><line class="grid" x1="36" x2="312" y1="8.0" y2="8.0"/><text class="tick" x="30" y="11.5" text-anchor="end">100%</text><text class="tick" x="36.0" y="154" text-anchor="middle">0</text><text class="tick" x="128.0" y="154" text-anchor="middle">10</text><text class="tick" x="220.0" y="154" text-anchor="middle">20</text><text class="tick" x="312.0" y="154" text-anchor="middle">30</text><text class="axis" x="312" y="170" text-anchor="end">회전 속도 (deg/s)</text><polygon class="band" points="36.0,8.0 54.4,8.0 72.8,8.0 91.2,8.8 109.6,12.6 128.0,17.7 146.4,36.9 164.8,40.5 183.2,23.6 201.6,17.7 220.0,15.0 238.4,8.8 256.8,8.8 275.2,8.8 293.6,8.8 312.0,8.8 312.0,30.0 293.6,30.0 275.2,30.0 256.8,30.0 238.4,30.0 220.0,47.2 201.6,52.3 183.2,62.0 164.8,84.1 146.4,79.9 128.0,52.3 109.6,41.8 91.2,30.0 72.8,23.0 54.4,23.0 36.0,23.0" fill="#5fc9ff"/><polyline class="other" points="36.0,118.0 54.4,131.2 72.8,113.6 91.2,91.6 109.6,100.4 128.0,104.8 146.4,118.0 164.8,113.6 183.2,104.8 201.6,126.8 220.0,118.0 238.4,100.4 256.8,135.6 275.2,131.2 293.6,131.2 312.0,104.8" stroke="#86e07f"/><polyline class="other" points="36.0,131.2 54.4,131.2 72.8,126.8 91.2,126.8 109.6,122.4 128.0,122.4 146.4,135.6 164.8,131.2 183.2,131.2 201.6,126.8 220.0,135.6 238.4,122.4 256.8,118.0 275.2,122.4 293.6,118.0 312.0,126.8" stroke="#ffb457"/><polyline class="win" points="36.0,8.0 54.4,8.0 72.8,8.0 91.2,12.4 109.6,21.2 128.0,30.0 146.4,56.4 164.8,60.8 183.2,38.8 201.6,30.0 220.0,25.6 238.4,12.4 256.8,12.4 275.2,12.4 293.6,12.4 312.0,12.4" stroke="#5fc9ff"/></svg>
-          <ol class="res-rank"><li style="--c:#5fc9ff"><i></i>로봇팔<b>88.2%</b></li><li style="--c:#86e07f"><i></i>그물<b>18.9%</b></li><li style="--c:#ffb457"><i></i>작살<b>10.2%</b></li></ol>
+          <ol class="res-rank"><li style="--c:#5fc9ff"><i></i>로봇팔<b>88.2%</b></li><li style="--c:#86e07f"><i></i>그물<b>18.9%</b></li><li style="--c:#ffb457"><i></i>작살<b>10.2%</b></li></ol><p class="res-sig">2위 그물과의 차이 <b>p &lt; 0.001</b><span>같은 조건 480쌍 짝지은 비교 · McNemar · Holm 보정</span></p>
         </article>
         <article class="res" style="--c:#86e07f">
           <div class="res-target"><b>중형</b><span>500 kg 위성</span></div>
@@ -261,7 +279,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
           </div>
           <div class="res-cap">회전하는 대상 포획 성공률</div>
           <svg class="chart" viewBox="0 0 320 172" role="img" aria-label="중형 대상의 회전 속도별 방식 성공률"><line class="grid" x1="36" x2="312" y1="140.0" y2="140.0"/><text class="tick" x="30" y="143.5" text-anchor="end">0%</text><line class="grid" x1="36" x2="312" y1="74.0" y2="74.0"/><text class="tick" x="30" y="77.5" text-anchor="end">50%</text><line class="grid" x1="36" x2="312" y1="8.0" y2="8.0"/><text class="tick" x="30" y="11.5" text-anchor="end">100%</text><text class="tick" x="36.0" y="154" text-anchor="middle">0</text><text class="tick" x="128.0" y="154" text-anchor="middle">10</text><text class="tick" x="220.0" y="154" text-anchor="middle">20</text><text class="tick" x="312.0" y="154" text-anchor="middle">30</text><text class="axis" x="312" y="170" text-anchor="end">회전 속도 (deg/s)</text><polygon class="band" points="36.0,47.9 54.4,68.1 72.8,44.1 91.2,51.8 109.6,44.1 128.0,47.9 146.4,30.0 164.8,30.0 183.2,15.0 201.6,12.6 220.0,17.7 238.4,17.7 256.8,17.7 275.2,12.6 293.6,20.5 312.0,15.0 312.0,47.2 293.6,57.2 275.2,41.8 256.8,52.3 238.4,52.3 220.0,52.3 201.6,41.8 183.2,47.2 164.8,71.2 146.4,71.2 128.0,92.3 109.6,88.3 91.2,96.2 72.8,88.3 54.4,111.1 36.0,92.3" fill="#86e07f"/><polyline class="other" points="36.0,82.8 54.4,82.8 72.8,96.0 91.2,104.8 109.6,118.0 128.0,126.8 146.4,131.2 164.8,126.8 183.2,131.2 201.6,131.2 220.0,131.2 238.4,131.2 256.8,135.6 275.2,135.6 293.6,135.6 312.0,135.6" stroke="#5fc9ff"/><polyline class="other" points="36.0,34.4 54.4,135.6 72.8,122.4 91.2,109.2 109.6,122.4 128.0,113.6 146.4,113.6 164.8,118.0 183.2,113.6 201.6,122.4 220.0,118.0 238.4,126.8 256.8,122.4 275.2,135.6 293.6,126.8 312.0,122.4" stroke="#ffb457"/><polyline class="win" points="36.0,69.6 54.4,91.6 72.8,65.2 91.2,74.0 109.6,65.2 128.0,69.6 146.4,47.6 164.8,47.6 183.2,25.6 201.6,21.2 220.0,30.0 238.4,30.0 256.8,30.0 275.2,21.2 293.6,34.4 312.0,25.6" stroke="#86e07f"/></svg>
-          <ol class="res-rank"><li style="--c:#86e07f"><i></i>그물<b>71.8%</b></li><li style="--c:#ffb457"><i></i>작살<b>14.0%</b></li><li style="--c:#5fc9ff"><i></i>로봇팔<b>12.4%</b></li></ol>
+          <ol class="res-rank"><li style="--c:#86e07f"><i></i>그물<b>71.8%</b></li><li style="--c:#ffb457"><i></i>작살<b>14.0%</b></li><li style="--c:#5fc9ff"><i></i>로봇팔<b>12.4%</b></li></ol><p class="res-sig">2위 작살과의 차이 <b>p &lt; 0.001</b><span>같은 조건 480쌍 짝지은 비교 · McNemar · Holm 보정</span></p>
         </article>
         <article class="res" style="--c:#5fc9ff">
           <div class="res-target"><b>대형</b><span>2,000 kg 로켓 단</span></div>
@@ -271,7 +289,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
           </div>
           <div class="res-cap">회전하는 대상 포획 성공률</div>
           <svg class="chart" viewBox="0 0 320 172" role="img" aria-label="대형 대상의 회전 속도별 방식 성공률"><line class="grid" x1="36" x2="312" y1="140.0" y2="140.0"/><text class="tick" x="30" y="143.5" text-anchor="end">0%</text><line class="grid" x1="36" x2="312" y1="74.0" y2="74.0"/><text class="tick" x="30" y="77.5" text-anchor="end">50%</text><line class="grid" x1="36" x2="312" y1="8.0" y2="8.0"/><text class="tick" x="30" y="11.5" text-anchor="end">100%</text><text class="tick" x="36.0" y="154" text-anchor="middle">0</text><text class="tick" x="128.0" y="154" text-anchor="middle">10</text><text class="tick" x="220.0" y="154" text-anchor="middle">20</text><text class="tick" x="312.0" y="154" text-anchor="middle">30</text><text class="axis" x="312" y="170" text-anchor="end">회전 속도 (deg/s)</text><polygon class="band" points="36.0,8.0 54.4,8.0 72.8,12.6 91.2,26.7 109.6,55.7 128.0,51.8 146.4,33.4 164.8,36.9 183.2,30.0 201.6,33.4 220.0,36.9 238.4,36.9 256.8,55.7 275.2,81.3 293.6,95.7 312.0,118.0 312.0,139.2 293.6,130.3 275.2,121.3 256.8,100.1 238.4,79.9 220.0,79.9 201.6,75.6 183.2,71.2 164.8,79.9 146.4,75.6 128.0,96.2 109.6,100.1 91.2,66.7 72.8,41.8 54.4,23.0 36.0,23.0" fill="#5fc9ff"/><polyline class="other" points="36.0,140.0 54.4,140.0 72.8,140.0 91.2,140.0 109.6,140.0 128.0,140.0 146.4,140.0 164.8,140.0 183.2,140.0 201.6,140.0 220.0,140.0 238.4,140.0 256.8,140.0 275.2,140.0 293.6,140.0 312.0,140.0" stroke="#86e07f"/><polyline class="other" points="36.0,8.0 54.4,100.4 72.8,126.8 91.2,135.6 109.6,126.8 128.0,135.6 146.4,140.0 164.8,140.0 183.2,140.0 201.6,140.0 220.0,122.4 238.4,131.2 256.8,135.6 275.2,140.0 293.6,140.0 312.0,140.0" stroke="#ffb457"/><polyline class="win" points="36.0,8.0 54.4,8.0 72.8,21.2 91.2,43.2 109.6,78.4 128.0,74.0 146.4,52.0 164.8,56.4 183.2,47.6 201.6,52.0 220.0,56.4 238.4,56.4 256.8,78.4 275.2,104.8 293.6,118.0 312.0,135.6" stroke="#5fc9ff"/></svg>
-          <ol class="res-rank"><li style="--c:#5fc9ff"><i></i>로봇팔<b>56.4%</b></li><li style="--c:#ffb457"><i></i>작살<b>5.3%</b></li><li style="--c:#86e07f"><i></i>그물<b>0.0%</b></li></ol><p class="res-note">그물 0 %는 회전하지 않는 대상에서도 0 %다. 한 변 5 m 그물이 지름 2 m·길이 3 m 원통(외접 지름 3.6 m)을 감싸지 못한 그물 크기의 한계이며, 더 큰 그물로는 달라질 수 있다.</p>
+          <ol class="res-rank"><li style="--c:#5fc9ff"><i></i>로봇팔<b>56.4%</b></li><li style="--c:#ffb457"><i></i>작살<b>5.3%</b></li><li style="--c:#86e07f"><i></i>그물<b>0.0%</b></li></ol><p class="res-sig">2위 작살과의 차이 <b>p &lt; 0.001</b><span>같은 조건 480쌍 짝지은 비교 · McNemar · Holm 보정</span></p><p class="res-note">그물 0 %는 회전하지 않는 대상에서도 0 %다. 한 변 5 m 그물이 지름 2 m·길이 3 m 원통(외접 지름 3.6 m)을 감싸지 못한 그물 크기의 한계이며, 더 큰 그물로는 달라질 수 있다.</p>
         </article>
     </div>
     <div class="axis">
@@ -452,6 +470,35 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
         <h3>연구의 한계</h3>
         <ol class="limits"><li><b>가정값의 근거.</b> 상당수가 문헌 근거 없이 정해졌다. 민감도 분석에서 결론을 가장 크게 흔든 값은 로봇팔의 그리퍼 접근 속도와 표면 마찰계수이며, 마찰계수는 실측으로 확정해야 한다.</li><li><b>구현체 비교.</b> 비교한 것은 세 방식 일반이 아니라 이 연구의 구현체다. 그물·작살의 성능은 윈치와 그물 크기 설계에 크게 좌우된다.</li><li><b>회전축.</b> 세 주축을 모두 실험한 것은 중형 대상뿐이다. 소형·대형의 결론은 z 축 회전에서 얻었다.</li><li><b>외부 검증.</b> 검증은 내부 일관성 확인에 해당한다. 지상 실험이나 궤도 실증 자료와의 비교가 필요하다.</li><li><b>작살 관통.</b> 임계 속도·입사각 규칙으로 판정하며 재료의 파괴 역학은 다루지 않는다.</li></ol>
       </div>
+    </div>
+  </section>
+  <section id="faq" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">자주 받는 질문</div>
+      <h2>결과를 어디까지 믿을 수 있나</h2>
+      <p>질문을 누르면 답과 근거로 가는 길이 열린다.</p>
+    </div>
+    <div class="faq">
+      <details id="faq-1">
+        <summary><span class="q">Q1</span><span>질량 때문인가, 형상 때문인가?</span></summary>
+        <div class="a"><p>둘을 따로 떼어 보지 않았다. 세 대상은 실제 파편 유형(큐브샛, 태양전지판이 달린 위성, 로켓 단)을 대표하도록 골라 질량·형상·관성이 함께 다르다. 그래서 결론도 '질량에 따라'가 아니라 '대상에 따라'다.</p><p>형상이 크게 작용한다는 근거는 있다. 같은 중형 위성에서 회전축만 바꿔도 1·2위 차이가 57.8 %p 에서 6.7~10.4 %p 로 줄었고, 태양전지판이 접근 평면을 쓸고 지나가지 않는 x·y 축 회전에서는 로봇팔 성공률이 12.4 % 에서 33~39 % 로 올랐다.</p><p>같은 형상에서 질량만 바꾼 실험은 하지 않았고 후속 연구로 남긴다.</p><div class="ev"><a href="#results">핵심 결과 · 회전축 실험</a></div></div>
+      </details>
+      <details id="faq-2">
+        <summary><span class="q">Q2</span><span>상대 각속도로 판정하면, 회전을 줄인 게 아니라 각운동량이 서비스 위성으로 옮겨 간 것 아닌가?</span></summary>
+        <div class="a"><p>맞다. 외부 토크가 없으면 어떤 포획 장치도 결합체 전체의 각운동량을 없앨 수 없다. 이 연구는 범위를 <b>포획 순간</b>으로 한정해, 상대 회전이 멈추고 결합이 유지되는 것을 성공으로 봤다. 결합체에 남은 회전을 없애는 일은 포획 뒤 서비스 위성 자세 제어의 몫이다.</p><p>옮겨 간 각운동량은 서비스 위성 자세 변화로 따로 측정했다. 중형 대상에서는 세 방식 모두 서비스 위성이 평균 140° 이상 돌았다.</p><p>뷰어 그래프의 보라색 선(대상의 관성계 각속도)으로도 보인다. 작살·중형 장면 끝에서 상대 각속도는 0.48 deg/s 로 성공 기준 아래지만, 대상은 서비스 위성과 함께 2.70 deg/s 로 돈다.</p><div class="ev"><a href="#costs">세부 지표</a><a href="runs/harpoon_medium_10degs.html?t=129">▶ 작살 · 중형 장면 끝</a></div></div>
+      </details>
+      <details id="faq-3">
+        <summary><span class="q">Q3</span><span>7,020번 돌려도 물리 모델이 틀리면 의미가 없지 않은가?</span></summary>
+        <div class="a"><p>시행 횟수가 모델의 정확성을 보장하지는 않는다. 그래서 세 가지를 확인했다.</p><ul><li><b>각운동량 보존.</b> 토크 없는 강체 회전을 Runge–Kutta 해와 비교해 20 s 뒤 각운동량 상대 오차가 7.5 × 10⁻⁴ 였다.</li><li><b>적분 간격 수렴.</b> 1/480·1/960·1/1920 s 로 바꿔 시험했다. 이 시험에서 작살 모델의 결함을 찾아 고쳤고, 고친 뒤에는 개별 시행의 성패는 바뀌어도 성공 시행 수는 세 간격에서 같았다.</li><li><b>가정값 민감도.</b> 결론을 가장 크게 흔든 값은 로봇팔의 그리퍼 접근 속도와 표면 마찰계수였다. 작살 발사 속도는 8~20 m/s 로 바꿔도 성공률이 변하지 않았다.</li></ul><p>지상 실험이나 궤도 실증 자료와의 비교는 하지 못해 연구의 한계로 밝혔다.</p><div class="ev"><a href="#method">실험 조건과 한계</a></div></div>
+      </details>
+      <details id="faq-4">
+        <summary><span class="q">Q4</span><span>세 방식을 비교한 연구는 이미 있지 않은가?</span></summary>
+        <div class="a"><p>세 방식을 정성적으로 비교한 리뷰와 큐브샛 기반 임무 타당성 연구는 있다. 이 연구가 다른 점은 네 가지다.</p><ul><li>세 방식 모두 같은 물리 엔진에서 접촉까지 시뮬레이션하고, 같은 성공 기준으로 판정했다.</li><li>대상 3종과 회전 0~30 deg/s 를 격자로 조합당 30 회씩, 회전축 실험까지 7,020회 시행했다.</li><li>같은 시드로 짝지어 방식 간 차이를 통계 검정했다(McNemar, Wilcoxon, Holm 보정).</li><li>성공률 밖에 감속 시간, 충격량, 서비스 위성 자세까지 비교했다.</li></ul><p>그 결과 단일한 최적 방식은 없고, 회전이 빠를수록 오히려 잘 잡히는 경우도 있다는 결론을 얻었다.</p><div class="ev"><a href="#conclusion">결론 다섯 가지</a></div></div>
+      </details>
+      <details id="faq-5">
+        <summary><span class="q">Q5</span><span>세 방식의 비교 조건은 공정한가?</span></summary>
+        <div class="a"><p>세 방식 일반이 아니라 이 연구의 구현체를 비교한 것이다. 그 안에서 조건을 맞추려 했다.</p><ul><li><b>로봇팔.</b> 모든 대상에 같은 6 관절, 도달 거리 2.6 m 팔.</li><li><b>그물.</b> 중형·대형은 대상 외접 지름의 약 1.4 배(7 m, 5 m)로 크기를 정했다. 대형의 0 %는 이 규칙이 원통에는 부족했다는 뜻이며, 더 큰 그물로는 달라질 수 있다.</li><li><b>작살.</b> 실증값 20 m/s 보다 보수적인 12 m/s 를 썼지만, 20 m/s 로 올려도 성공률이 변하지 않았다.</li><li><b>오차.</b> 같은 반복 번호에는 세 방식이 같은 시드, 즉 같은 오차를 받도록 짝지었다.</li></ul><div class="ev"><a href="#method">실험 조건</a></div></div>
+      </details>
     </div>
   </section>
   <section id="guide" class="wrap">

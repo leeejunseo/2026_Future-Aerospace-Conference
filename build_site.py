@@ -190,6 +190,18 @@ def load_axis(folder: str) -> Optional[Dict]:
     return {"rates": rates, "p": pvals}
 
 
+def load_pairs(path: str) -> Optional[Dict]:
+    """대상별 방식 짝비교(원고 표 4). 같은 시드로 짝지은 480 회(정지 포함)의 McNemar 정확검정, Holm 보정 p.
+    {(대상, frozenset({방식1, 방식2})): (p, 짝 수)}. 파일이 없으면 None."""
+    if not os.path.exists(path):
+        return None
+    out = {}
+    with open(path, encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            out[(row["target"], frozenset((row["method_1"], row["method_2"])))] = (float(row["mcnemar_p_holm"]), int(row["n_pairs"]))
+    return out
+
+
 def target_ranking(curves: Dict, target: str) -> List:
     """회전하는 대상(회전 속도 > 0)만 합친 방식별 성공률, 높은 순. 원고 요약문의 수치와 같은 기준이다."""
     out = []
@@ -336,6 +348,9 @@ section.wrap{padding-top:88px;scroll-margin-top:-60px}
 .res-rate{font-family:var(--mono);font-size:40px;font-weight:500;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .res-rate small{margin-left:2px;font-size:18px;color:var(--muted)}
 .res-cap{color:var(--dim);font-size:12.5px}
+.res-sig{margin:12px 0 0;color:var(--muted);font-size:13px}
+.res-sig b{color:var(--good);font-family:var(--mono);font-weight:500}
+.res-sig span{display:block;color:var(--dim);font-size:11.5px}
 .res-note{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);color:var(--muted);font-size:12.5px;line-height:1.65}
 .chart{display:block;width:100%;height:auto;margin:12px 0 8px}
 .chart .grid{stroke:var(--line);stroke-width:1}
@@ -416,6 +431,21 @@ color:var(--muted);font-size:13.5px;line-height:1.7}
 .limits li{margin-bottom:10px}
 .limits li::marker{color:var(--dim)}
 .limits b{color:var(--text);font-weight:600}
+.faq{display:grid;gap:10px}
+.faq details{border-radius:14px;background:var(--panel);border:1px solid var(--line);scroll-margin-top:16px}
+.faq details[open]{border-color:var(--line2)}
+.faq summary{display:flex;align-items:baseline;gap:12px;padding:16px 20px;cursor:pointer;list-style:none;font-size:15.5px;font-weight:700;line-height:1.5}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";margin-left:auto;padding-left:12px;color:var(--muted);font-size:20px;font-weight:400;line-height:1}
+.faq details[open] summary::after{content:"−"}
+.faq summary:hover{color:var(--accent)}
+.faq .q{flex:none;color:var(--accent);font-family:var(--mono);font-size:13px;font-weight:500}
+.faq .a{padding:0 20px 18px 48px;color:var(--muted);font-size:14.5px;line-height:1.8}
+.faq .a p{margin:0 0 8px}
+.faq .a ul{margin:0 0 8px;padding-left:20px}
+.faq .a li{margin-bottom:4px}
+.faq .a b{color:var(--text);font-weight:600}
+.faq .ev{padding-top:8px}
 .run-note{margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--line);color:var(--muted);font-size:13px;line-height:1.65}
 .qr{display:flex;gap:16px;align-items:flex-start}
 .qr img{flex:none;width:112px;height:112px;padding:6px;border-radius:10px;background:#fff}
@@ -449,7 +479,7 @@ footer.wrap{margin-top:72px;padding-top:24px;padding-bottom:56px;border-top:1px 
 @media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;gap:36px;padding-top:8px}
 .method{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:860px){.swipe{display:block}}
-@media (max-width:640px){.wrap{padding:0 16px}.topbar nav{display:none}.facts>div{flex:1 1 40%}section.wrap{padding-top:56px}
+@media (max-width:640px){.faq .a{padding-left:20px}.wrap{padding:0 16px}.topbar nav{display:none}.facts>div{flex:1 1 40%}section.wrap{padding-top:56px}
 .res-rate{font-size:34px}.spec{grid-template-columns:minmax(0,1fr);gap:0}.spec dd{margin-bottom:10px}.qr img{display:none}
 .cost{min-width:0;font-size:13px}.cost th,.cost td{padding:8px 9px}.cost .tg span,.v>span,.cost th small{display:none}.v{display:block}.cost .m em{display:none}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
@@ -581,7 +611,7 @@ def build_axis(axis: Dict) -> str:
     </div>"""
 
 
-def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
+def build_results(curves: Dict, axis: Optional[Dict] = None, pairs: Optional[Dict] = None) -> str:
     cards = []
     n_per = 0
     for target in TARGET_ORDER:
@@ -602,6 +632,13 @@ def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
                 print(f"  해설 생략: {target}/{m} 는 정지 대상 성공률이 0 이 아니어서 해설 문장과 맞지 않는다")
                 continue
             notes.append(f'<p class="res-note">{html.escape(note["text"])}</p>')
+        # 1위와 2위의 차이가 우연이 아닌지: 같은 시드로 짝지은 McNemar 검정 (원고 표 4)
+        sig = ""
+        if pairs and len(rank) > 1:
+            hit = pairs.get((target, frozenset((win, rank[1][0]))))
+            if hit:
+                sig = (f'<p class="res-sig">2위 {METHOD_LABELS[rank[1][0]]}과의 차이 <b>{fmt_p(hit[0])}</b>'
+                       f'<span>같은 조건 {hit[1]}쌍 짝지은 비교 · McNemar · Holm 보정</span></p>')
         cards.append(f"""
         <article class="res" style="--c:{METHOD_COLORS[win]}">
           <div class="res-target"><b>{tname}</b><span>{tdesc}</span></div>
@@ -611,7 +648,7 @@ def build_results(curves: Dict, axis: Optional[Dict] = None) -> str:
           </div>
           <div class="res-cap">회전하는 대상 포획 성공률</div>
           {success_chart(curves, target, win)}
-          <ol class="res-rank">{items}</ol>{"".join(notes)}
+          <ol class="res-rank">{items}</ol>{sig}{"".join(notes)}
         </article>""")
     spins = sorted({p["spin"] for pts in curves.values() for p in pts if p["spin"] > 0})
     span = f"{spins[0]:g}–{spins[-1]:g} deg/s" if spins else "회전"
@@ -861,6 +898,100 @@ def build_method() -> str:
   </section>"""
 
 
+def build_faq(curves: Dict, costs: Optional[Dict], axis: Optional[Dict], runs: List[Dict]) -> str:
+    """자주 받는 질문. 발표 질의응답 때 띄워 두고 답할 수 있게, 답마다 숫자와 근거로 가는 길을 단다.
+    숫자는 자료에서 다시 계산하고, 원고에만 있는 검증 결과(3.3·4.5 절)는 원고 문장을 옮겼다."""
+    have = {run_kind(r): r for r in runs}
+    total = sum(p["n"] for pts in curves.values() for p in pts) if curves else 0
+    items = []
+
+    # 1. 질량인가 형상인가
+    a1 = ("<p>둘을 따로 떼어 보지 않았다. 세 대상은 실제 파편 유형(큐브샛, 태양전지판이 달린 위성, 로켓 단)을 "
+          "대표하도록 골라 질량·형상·관성이 함께 다르다. 그래서 결론도 '질량에 따라'가 아니라 '대상에 따라'다.</p>")
+    if axis:
+        gaps, arm = {}, {}
+        for ax in AXIS_ORDER:
+            r = axis["rates"].get(ax)
+            if r and len(r) >= 2:
+                top2 = sorted((v[0] for v in r.values()), reverse=True)[:2]
+                gaps[ax] = (top2[0] - top2[1]) * 100
+                if "arm" in r:
+                    arm[ax] = r["arm"][0] * 100
+        others = [g for k, g in gaps.items() if k != "z"]
+        arm_xy = [v for k, v in arm.items() if k != "z"]
+        if "z" in gaps and others and arm_xy and "z" in arm:
+            a1 += (f"<p>형상이 크게 작용한다는 근거는 있다. 같은 중형 위성에서 회전축만 바꿔도 1·2위 차이가 "
+                   f"{gaps['z']:.1f} %p 에서 {min(others):.1f}~{max(others):.1f} %p 로 줄었고, 태양전지판이 접근 평면을 쓸고 "
+                   f"지나가지 않는 x·y 축 회전에서는 로봇팔 성공률이 {arm['z']:.1f} % 에서 {min(arm_xy):.0f}~{max(arm_xy):.0f} % 로 올랐다.</p>")
+    a1 += "<p>같은 형상에서 질량만 바꾼 실험은 하지 않았고 후속 연구로 남긴다.</p>"
+    items.append(("질량 때문인가, 형상 때문인가?", a1, '<a href="#results">핵심 결과 · 회전축 실험</a>'))
+
+    # 2. 상대 각속도 판정과 각운동량
+    a2 = ("<p>맞다. 외부 토크가 없으면 어떤 포획 장치도 결합체 전체의 각운동량을 없앨 수 없다. 이 연구는 범위를 "
+          "<b>포획 순간</b>으로 한정해, 상대 회전이 멈추고 결합이 유지되는 것을 성공으로 봤다. 결합체에 남은 회전을 "
+          "없애는 일은 포획 뒤 서비스 위성 자세 제어의 몫이다.</p>")
+    med = [costs[("medium", m)]["attitude"] for m in METHOD_ORDER if costs and ("medium", m) in costs]
+    if len(med) == len(METHOD_ORDER):
+        a2 += (f"<p>옮겨 간 각운동량은 서비스 위성 자세 변화로 따로 측정했다. 중형 대상에서는 세 방식 모두 "
+               f"서비스 위성이 평균 {min(med):.0f}° 이상 돌았다.</p>")
+    ev2 = '<a href="#costs">세부 지표</a>' if costs else ""
+    h = have.get(("harpoon", "medium"))
+    if h and h["data"].get("frames"):
+        last = h["data"]["frames"][-1]
+        w_end = math.degrees(math.sqrt(sum(v * v for v in last["w"])))
+        if last["rel"] <= 1.0 < w_end:
+            a2 += (f"<p>뷰어 그래프의 보라색 선(대상의 관성계 각속도)으로도 보인다. 작살·중형 장면 끝에서 상대 각속도는 "
+                   f"{last['rel']:.2f} deg/s 로 성공 기준 아래지만, 대상은 서비스 위성과 함께 {w_end:.2f} deg/s 로 돈다.</p>")
+            ev2 += f'<a href="runs/{html.escape(h["name"])}.html?t={max(0.0, last["t"] - 1):.0f}">▶ 작살 · 중형 장면 끝</a>'
+    items.append(("상대 각속도로 판정하면, 회전을 줄인 게 아니라 각운동량이 서비스 위성으로 옮겨 간 것 아닌가?", a2, ev2))
+
+    # 3. 모델 신뢰성 (원고 3.3·4.5 절)
+    a3 = ("<p>시행 횟수가 모델의 정확성을 보장하지는 않는다. 그래서 세 가지를 확인했다.</p><ul>"
+          "<li><b>각운동량 보존.</b> 토크 없는 강체 회전을 Runge–Kutta 해와 비교해 20 s 뒤 각운동량 상대 오차가 7.5 × 10⁻⁴ 였다.</li>"
+          "<li><b>적분 간격 수렴.</b> 1/480·1/960·1/1920 s 로 바꿔 시험했다. 이 시험에서 작살 모델의 결함을 찾아 고쳤고, "
+          "고친 뒤에는 개별 시행의 성패는 바뀌어도 성공 시행 수는 세 간격에서 같았다.</li>"
+          "<li><b>가정값 민감도.</b> 결론을 가장 크게 흔든 값은 로봇팔의 그리퍼 접근 속도와 표면 마찰계수였다. "
+          "작살 발사 속도는 8~20 m/s 로 바꿔도 성공률이 변하지 않았다.</li></ul>"
+          "<p>지상 실험이나 궤도 실증 자료와의 비교는 하지 못해 연구의 한계로 밝혔다.</p>")
+    n_all = total + (sum(n for ax, r in axis["rates"].items() if ax != "z" for _, n in r.values()) if axis else 0)
+    items.append((f"{n_all:,}번 돌려도 물리 모델이 틀리면 의미가 없지 않은가?" if n_all else "물리 모델은 믿을 만한가?",
+                  a3, '<a href="#method">실험 조건과 한계</a>'))
+
+    # 4. 선행 연구와의 차이
+    a4 = ("<p>세 방식을 정성적으로 비교한 리뷰와 큐브샛 기반 임무 타당성 연구는 있다. 이 연구가 다른 점은 네 가지다.</p><ul>"
+          "<li>세 방식 모두 같은 물리 엔진에서 접촉까지 시뮬레이션하고, 같은 성공 기준으로 판정했다.</li>"
+          f"<li>대상 3종과 회전 0~30 deg/s 를 격자로 조합당 30 회씩, 회전축 실험까지 {n_all:,}회 시행했다.</li>"
+          "<li>같은 시드로 짝지어 방식 간 차이를 통계 검정했다(McNemar, Wilcoxon, Holm 보정).</li>"
+          "<li>성공률 밖에 감속 시간, 충격량, 서비스 위성 자세까지 비교했다.</li></ul>"
+          "<p>그 결과 단일한 최적 방식은 없고, 회전이 빠를수록 오히려 잘 잡히는 경우도 있다는 결론을 얻었다.</p>")
+    items.append(("세 방식을 비교한 연구는 이미 있지 않은가?", a4, '<a href="#conclusion">결론 다섯 가지</a>'))
+
+    # 5. 공정성
+    a5 = ("<p>세 방식 일반이 아니라 이 연구의 구현체를 비교한 것이다. 그 안에서 조건을 맞추려 했다.</p><ul>"
+          "<li><b>로봇팔.</b> 모든 대상에 같은 6 관절, 도달 거리 2.6 m 팔.</li>"
+          "<li><b>그물.</b> 중형·대형은 대상 외접 지름의 약 1.4 배(7 m, 5 m)로 크기를 정했다. 대형의 0 %는 이 규칙이 "
+          "원통에는 부족했다는 뜻이며, 더 큰 그물로는 달라질 수 있다.</li>"
+          "<li><b>작살.</b> 실증값 20 m/s 보다 보수적인 12 m/s 를 썼지만, 20 m/s 로 올려도 성공률이 변하지 않았다.</li>"
+          "<li><b>오차.</b> 같은 반복 번호에는 세 방식이 같은 시드, 즉 같은 오차를 받도록 짝지었다.</li></ul>")
+    items.append(("세 방식의 비교 조건은 공정한가?", a5, '<a href="#method">실험 조건</a>'))
+
+    blocks = "".join(f"""
+      <details id="faq-{i}">
+        <summary><span class="q">Q{i}</span><span>{html.escape(q)}</span></summary>
+        <div class="a">{keep_units(a)}{f'<div class="ev">{ev}</div>' if ev else ''}</div>
+      </details>""" for i, (q, a, ev) in enumerate(items, 1))
+    return f"""
+  <section id="faq" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">자주 받는 질문</div>
+      <h2>결과를 어디까지 믿을 수 있나</h2>
+      <p>질문을 누르면 답과 근거로 가는 길이 열린다.</p>
+    </div>
+    <div class="faq">{blocks}
+    </div>
+  </section>"""
+
+
 def run_note(r: Dict) -> Optional[str]:
     """리플레이 카드의 해설 한 줄. 장면을 원고의 결론과 잇는다. 장면 자료가 해설의 전제와 맞을 때만 단다.
     시간 창(180 s)보다 짧게 기록한 장면이면 그 사실을 끝에 붙인다."""
@@ -893,7 +1024,7 @@ def run_note(r: Dict) -> Optional[str]:
 
 def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optional[Dict] = None,
                 axis: Optional[Dict] = None, site_url: str = SITE_URL, out_dir: Optional[str] = None,
-                costs: Optional[Dict] = None) -> str:
+                costs: Optional[Dict] = None, pairs: Optional[Dict] = None) -> str:
     thumbs = thumbs or {}
     fx = scene_facts(runs)
 
@@ -986,7 +1117,7 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
   <canvas class="sky" aria-hidden="true"></canvas>
   <div class="topbar wrap">
     <a class="brand" href="#"><i></i>회전 우주 파편 포획 시뮬레이션</a>
-    <nav>{'<a href="#results">핵심 결과</a>' if curves else ''}{'<a href="#costs">세부 지표</a>' if costs else ''}{'<a href="#conclusion">결론</a>' if curves else ''}<a href="#replays">3D 리플레이</a><a href="#method">조건·한계</a><a href="#guide">보는 법</a></nav>
+    <nav>{'<a href="#results">핵심 결과</a>' if curves else ''}{'<a href="#costs">세부 지표</a>' if costs else ''}{'<a href="#conclusion">결론</a>' if curves else ''}<a href="#replays">3D 리플레이</a><a href="#method">조건·한계</a>{'<a href="#faq">질문</a>' if curves else ''}<a href="#guide">보는 법</a></nav>
   </div>
 
   <header class="hero wrap{'' if hero_shot else ' solo'}">
@@ -1001,7 +1132,7 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
       <div class="cta">{'<a class="btn primary" href="#results">핵심 결과 보기</a>' if curves else ''}<a class="btn{'' if curves else ' primary'}" href="#replays">3D 리플레이</a></div>
     </div>{hero_shot}
   </header>
-{build_results(curves, axis) if curves else ''}{build_costs(curves, costs) if costs else ''}{build_conclusions(curves, costs, axis, runs) if curves else ''}
+{build_results(curves, axis, pairs) if curves else ''}{build_costs(curves, costs) if costs else ''}{build_conclusions(curves, costs, axis, runs) if curves else ''}
   <section id="replays" class="wrap">
     <div class="sec-head">
       <div class="eyebrow">3D 리플레이</div>
@@ -1012,7 +1143,7 @@ def build_index(runs: List[Dict], curves: Optional[Dict] = None, thumbs: Optiona
 {"".join(cards)}
     </div>
   </section>
-{build_method()}
+{build_method()}{build_faq(curves, costs, axis, runs) if curves else ''}
   <section id="guide" class="wrap">
     <div class="guide">
       <div>
@@ -1245,8 +1376,9 @@ def build(inputs: List[str], out_dir: str, summary: Optional[str] = None, thumbs
     curves = load_summary(summary_path)
     axis = load_axis(os.path.join(here, "results_axis"))
     costs = load_costs(summary_path, os.path.join(os.path.dirname(summary_path), "results_raw.csv"))
+    pairs = load_pairs(os.path.join(here, "comparison", "compare_by_target.csv"))
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(build_index(runs, curves, found, axis, site_url, out_dir, costs))
+        f.write(build_index(runs, curves, found, axis, site_url, out_dir, costs, pairs))
 
     # 오프라인 발표 대비용 단독 HTML. 첫 화면이 없으므로 이동 막대에는 시나리오끼리만 잇는다
     if standalone:
